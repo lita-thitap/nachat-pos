@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ณฉัตร | Nachat – POS</title>
   <style>
-  /* ====== Nachat – POS: Black&White Minimal (ตามภาพ) ====== */
+  /* ====== Nachat – POS: Black&White Minimal ====== */
   :root{
     --page:#f5f6f7;
     --panel:#ffffff;
@@ -24,32 +24,38 @@
     font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans Thai",sans-serif;
   }
 
-  /* ---------- Header ---------- */
+  /* ---------- Header (ตามแบบที่ต้องการ) ---------- */
   header{
-    display:flex;align-items:center;gap:14px;
-    padding:18px 18px;
-    position:sticky;top:0;z-index:5;
+    background:linear-gradient(180deg,#111 0%,#1e1e1e 100%);
     color:#fff;
-    background:linear-gradient(180deg,#1c1c1f 0%, #2a2b2e 100%);
-    border-bottom:1px solid #242526;
+    text-align:center;
+    padding:30px 16px 24px;
+    border-bottom:2px solid #000;
+    position:sticky; top:0; z-index:5;
   }
-  header .brand{display:flex;align-items:center;gap:12px}
-  header h1{margin:0;font-size:18px;font-weight:800;color:#fff}
-  header img{width:34px;height:34px;border-radius:50%}
-  .tag{font-size:12px;padding:4px 8px;border-radius:10px;border:1px solid #3a3a3a;color:#e7e7e7}
+  .wrap{max-width:1200px; margin:22px auto; padding:0 16px}
+  .header-wrap{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  }
+  .header-title{
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    font-size:22px; font-weight:800; margin:0; color:#fff;
+  }
+  .header-logo{
+    height:80px; width:auto; border-radius:8px; object-fit:contain;
+  }
+  .sub{ font-size:14px; color:#d5d5d5; letter-spacing:.3px }
+  .sub span{ color:#fff }
 
-  /* ---------- Layout ---------- */
-  .wrap{max-width:1200px;margin:22px auto;padding:0 16px}
-
-  /* Tabs */
-  .tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  /* ---------- Tabs ---------- */
+  .tabs{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 14px}
   .tab{
     padding:10px 16px;border-radius:14px;cursor:pointer;
     background:#fff;border:1.5px solid var(--black);color:var(--black);
   }
   .tab.active{background:var(--black);color:#fff;outline:none}
 
-  /* Sub tabs */
+  /* ---------- Sub tabs (Settings) ---------- */
   .subtabs{display:flex;gap:8px;margin-bottom:12px}
   .subtab{
     padding:8px 12px;border-radius:10px;cursor:pointer;
@@ -57,7 +63,7 @@
   }
   .subtab.active{background:var(--black);color:#fff;outline:none}
 
-  /* ---------- Card/Panel ---------- */
+  /* ---------- Cards & Layout ---------- */
   .card{
     background:var(--panel);
     border:1px solid var(--line);
@@ -73,7 +79,7 @@
   .space{height:12px}
   .muted{color:var(--muted)}
 
-  /* ---------- Controls / Inputs / Buttons ---------- */
+  /* ---------- Inputs / Buttons ---------- */
   input,select{
     width:100%;
     background:#fff;color:var(--fg);
@@ -81,7 +87,7 @@
     padding:10px 12px;border-radius:12px;
     outline:none;
   }
-  input::placeholder,select:has(option[value=""]:checked){color:#a8a8a8}
+  input::placeholder{color:#a8a8a8}
 
   .btn{
     padding:10px 14px;border-radius:12px;cursor:pointer;
@@ -97,7 +103,8 @@
 
   .notice{background:var(--raised);color:#333;border:1px solid var(--line);padding:10px;border-radius:12px}
 
-  /* ---------- ปุ่มเมนูอาหาร ---------- */
+  /* ---------- ปุ่มเมนูอาหาร (ก้อนดำ) ---------- */
+  #menuPanels .card{ background:#fafafa; border:1px solid #e5e5e5 }
   #menuPanels .card button,
   #menuPanels .card .btn,
   #menuPanels .card .item,
@@ -109,20 +116,34 @@
     padding:16px 12px;
     font-weight:500;
   }
-  #menuPanels .card{background:#fff;border-color:#eee}
-  .pill{padding:6px 10px;border-radius:999px;border:1.5px solid var(--black);background:#fff;color:var(--black)}
+
+  /* ---------- ป้ายวงรีรวมราคา ---------- */
+  .pill{
+    padding:6px 10px;border-radius:999px;
+    border:1.5px solid var(--black);
+    background:#fff;color:var(--black);
+  }
   </style>
 </head>
 <body>
+
+  <!-- ====== HEADER (ตามที่ขอ) ====== -->
   <header>
-    <div class="brand">
-      <img src="https://lita-thitap.github.io/nachat-pos/LOGO.png" alt="logo"/>
-      <h1>ณฉัตร | Nachat – POS</h1>
+    <div class="wrap header-wrap">
+      <h1 class="header-title">
+        <!-- เปลี่ยน src เป็นไฟล์โลโก้ของคุณ (เช่น LOGO.png ในโฟลเดอร์เดียวกัน) -->
+        <img src="LOGO.png" alt="Nachat Logo" class="header-logo"/>
+        ณฉัตร | Nachat – POS
+      </h1>
+      <div class="sub">
+        หมูกระทะชุดละ 299 + Add-on & เครื่องดื่ม |
+        <span>สรุปยอดขายรายวัน / สัปดาห์ / เดือน</span>
+      </div>
     </div>
-    <span class="tag" id="syncState">offline</span>
   </header>
 
   <div class="wrap">
+    <!-- ====== NAV TABS ====== -->
     <div class="tabs">
       <button class="tab active" data-tab="#pos">รับออเดอร์</button>
       <button class="tab" data-tab="#open">โต๊ะ/บิล</button>
@@ -130,7 +151,7 @@
       <button class="tab" data-tab="#settings">ตั้งค่าร้าน</button>
     </div>
 
-    <!-- POS TAB -->
+    <!-- ====== POS TAB ====== -->
     <section id="pos" class="tabpane">
       <div class="card">
         <div class="row">
@@ -141,7 +162,7 @@
       </div>
 
       <div class="space"></div>
-      <div id="menuPanels" class="grid"><!-- auto render --></div>
+      <div id="menuPanels" class="grid"><!-- เมนูจะ render อัตโนมัติจาก app.js --></div>
 
       <div class="space"></div>
       <div class="card">
@@ -157,22 +178,26 @@
       </div>
     </section>
 
-    <!-- OPEN BILLS TAB -->
+    <!-- ====== OPEN BILLS TAB ====== -->
     <section id="open" class="tabpane" hidden>
       <div class="card"><h3>บิลที่เปิดอยู่</h3><div id="openBills"></div></div>
     </section>
 
-    <!-- REPORTS TAB -->
+    <!-- ====== REPORTS TAB ====== -->
     <section id="reports" class="tabpane" hidden>
       <div class="card">
         <h3>สรุปรายงาน</h3>
-        <div class="row"><button class="btn" id="btnToday">วันนี้</button><button class="btn" id="btnMonth">เดือนนี้</button><button class="btn" id="btnPullNow">ดึงจากคลาวด์ทันที</button></div>
+        <div class="row">
+          <button class="btn" id="btnToday">วันนี้</button>
+          <button class="btn" id="btnMonth">เดือนนี้</button>
+          <button class="btn" id="btnPullNow">ดึงจากคลาวด์ทันที</button>
+        </div>
         <div class="space"></div>
         <div id="reportBox" class="muted">ยังไม่มีข้อมูล</div>
       </div>
     </section>
 
-    <!-- SETTINGS TAB -->
+    <!-- ====== SETTINGS TAB ====== -->
     <section id="settings" class="tabpane" hidden>
       <div class="subtabs">
         <button class="subtab active" data-sub="#menuSet">ตั้งค่าเมนู</button>
@@ -205,7 +230,7 @@
             <input id="newCode" class="col-code" placeholder="รหัส (เช่น Z99)"/>
             <button class="btn primary" id="btnAddMenu">เพิ่ม</button>
           </div>
-          <div id="menuTableBox" class="mini muted">กำลังโหลด…</div>
+          <div id="menuTableBox" class="mini muted">ยังไม่มีเมนู – เพิ่มด้านบนได้เลย</div>
         </div>
       </div>
 
@@ -228,21 +253,26 @@
     </section>
   </div>
 
+  <!-- ====== Scripts ====== -->
   <script src="app.js"></script>
   <script src="sync.js"></script>
   <script>
     // Tabs
     document.querySelectorAll('.tab').forEach(btn=>{
       btn.addEventListener('click',()=>{
-        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
-        document.querySelectorAll('.tabpane').forEach(p=>p.hidden=true); document.querySelector(btn.dataset.tab).hidden=false;
+        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.tabpane').forEach(p=>p.hidden=true);
+        document.querySelector(btn.dataset.tab).hidden=false;
       });
     });
     // Subtabs
     document.querySelectorAll('.subtab').forEach(btn=>{
       btn.addEventListener('click',()=>{
-        document.querySelectorAll('.subtab').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
-        document.querySelectorAll('.subpane').forEach(p=>p.hidden=true); document.querySelector(btn.dataset.sub).hidden=false;
+        document.querySelectorAll('.subtab').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.subpane').forEach(p=>p.hidden=true);
+        document.querySelector(btn.dataset.sub).hidden=false;
       });
     });
   </script>
