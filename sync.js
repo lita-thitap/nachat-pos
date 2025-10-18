@@ -1,39 +1,29 @@
-/* Nachat POS – sync.js (pure JS) */
+// sync.js — เวอร์ชันกันชน ไม่ชนกับตัวแปร global
+(()=>{ 'use strict';
 
-// ปล่อยเป็นโครงไว้ก่อน เพื่อไม่ให้ error
-// ถ้าจะเชื่อม Google Sheets ให้ใส่ฟังก์ชัน fetch() ที่ POST ไปยัง Web App URL ที่ตั้งค่าไว้
+  // เก็บ key ชื่อเดียว
+  const SYNC = { webAppUrlKey: 'POS_WEBAPP_URL' };
 
-const SYNC = {
-  webAppUrlKey: "POS_WEBAPP_URL",
-};
+  // helper เฉพาะไฟล์นี้ (ตั้งชื่อ qs เพื่อไม่ชนกับ $ ใน app.js)
+  const qs = (sel, el=document)=> el.querySelector(sel);
 
-const $ = (sel) => document.querySelector(sel);
-
-function getWebAppUrl() {
-  return localStorage.getItem(SYNC.webAppUrlKey) || "";
-}
-function setWebAppUrl(url) {
-  localStorage.setItem(SYNC.webAppUrlKey, url);
-}
-
-$("#btnSaveUrl")?.addEventListener("click", () => {
-  const url = $("#inpWebAppUrl")?.value.trim() || "";
-  if (!url) return alert("วาง Web App URL ก่อน");
-  setWebAppUrl(url);
-  alert("บันทึกแล้ว");
-});
-
-$("#btnTest")?.addEventListener("click", async () => {
-  const url = getWebAppUrl();
-  if (!url) return alert("ยังไม่ได้ตั้งค่า Web App URL");
-  try {
-    // แค่ HEAD/GET test (จริง ๆ ควรทำ POST echo)
-    const res = await fetch(url, { method: "GET" });
-    $("#gsStatus").textContent = res.ok ? "เชื่อมต่อได้" : `เชื่อมต่อไม่ได้ (HTTP ${res.status})`;
-  } catch (e) {
-    $("#gsStatus").textContent = "เชื่อมต่อไม่ได้";
+  // เก็บ/อ่าน Web App URL สำหรับ Apps Script
+  function getWebAppUrl(){
+    return localStorage.getItem(SYNC.webAppUrlKey) || '';
   }
-});
+  function setWebAppUrl(url){
+    localStorage.setItem(SYNC.webAppUrlKey, (url || '').trim());
+  }
 
-// preload url ในช่อง input หากมี
-if ($("#inpWebAppUrl")) $("#inpWebAppUrl").value = getWebAppUrl();
+  // ปุ่มบันทึก URL (ถ้ามีอยู่ในหน้า)
+  qs('#btnSaveUrl')?.addEventListener('click', () => {
+    const url = (qs('#inpWebAppUrl')?.value || '').trim();
+    if (!url) { alert('วาง Web App URL ก่อน'); return; }
+    setWebAppUrl(url);
+    alert('บันทึกแล้ว');
+  });
+
+  // เผยฟังก์ชันให้อีกไฟล์เรียกใช้ได้ ถ้าจำเป็น
+  window.getWebAppUrl = getWebAppUrl;
+
+})();
