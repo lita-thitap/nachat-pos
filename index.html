@@ -3,147 +3,126 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ณฉัตร | Nachat – POS</title>
+  <title>ณฉัตร | Nachat POS (Offline-first)</title>
   <style>
-  /* ====== Nachat – POS: Black&White Minimal ====== */
-  :root{
-    --page:#f5f6f7;
-    --panel:#ffffff;
-    --raised:#fafafa;
-    --line:#e9e9e9;
-    --fg:#111111;
-    --muted:#777777;
-    --black:#111111;
-  }
+    /* ====== Dark Gray Theme ====== */
+    :root{
+      --black:#111;
+      --gray:#222;
+      --white:#fff;
+      --muted:#777;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;
+      background:#f5f5f5;
+      color:var(--black);
+      font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto;
+    }
 
-  *{box-sizing:border-box}
-  html,body{
-    margin:0;padding:0;
-    background:var(--page);
-    color:var(--fg);
-    font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans Thai",sans-serif;
-  }
+    /* Header */
+    header{
+      background:linear-gradient(to bottom,#222,#1a1a1a);
+      color:#fff;
+      text-align:center;
+      padding:22px 16px 28px;
+    }
+    .header-wrap{max-width:900px;margin:0 auto;}
+    .header-logo{
+      height:80px;
+      border-radius:8px;
+      display:block;
+      margin:0 auto 6px;
+    }
+    .header-title{
+      font-size:20px;
+      font-weight:700;
+      margin:0;
+    }
+    .header-sub{
+      font-size:13px;
+      color:#ccc;
+    }
 
-  /* ---------- Header (ตามแบบที่ต้องการ) ---------- */
-  header{
-    background:#212121;
-    color:#fff;
-    text-align:center;
-    padding:30px 16px 24px;
-    border-bottom:2px solid #000;
-    position:sticky; top:0; z-index:5;
-  }
-  .wrap{max-width:1200px; margin:22px auto; padding:0 16px}
-  .header-wrap{
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
-  }
-  .header-title{
-    display:flex; align-items:center; justify-content:center; gap:12px;
-    font-size:22px; font-weight:800; margin:0; color:#fff;
-  }
-  .header-logo{
-    height:100px; width:auto; border-radius:8px; object-fit:contain;
-  }
-  .sub{ font-size:14px; color:#d5d5d5; letter-spacing:.3px }
-  .sub span{ color:#fff }
+    /* Layout */
+    .wrap{max-width:1100px;margin:16px auto;padding:0 14px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .tab{
+      padding:10px 14px;
+      border:1px solid #111;
+      border-radius:12px;
+      background:#fff;
+      cursor:pointer;
+      color:#111;
+    }
+    .tab.active{background:#111;color:#fff}
 
-  /* ---------- Tabs ---------- */
-  .tabs{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 14px}
-  .tab{
-    padding:10px 16px;border-radius:14px;cursor:pointer;
-    background:#fff;border:1.5px solid var(--black);color:var(--black);
-  }
-  .tab.active{background:var(--black);color:#fff;outline:none}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+    .card{background:#fff;border:1px solid #ddd;border-radius:16px;padding:12px}
+    .card h3{margin:0 0 8px;font-size:15px}
 
-  /* ---------- Sub tabs (Settings) ---------- */
-  .subtabs{display:flex;gap:8px;margin-bottom:12px}
-  .subtab{
-    padding:8px 12px;border-radius:10px;cursor:pointer;
-    background:#fff;border:1.5px solid var(--black);color:var(--black)
-  }
-  .subtab.active{background:var(--black);color:#fff;outline:none}
+    .row{display:flex;gap:10px;align-items:center}
+    .row > *{flex:1}
 
-  /* ---------- Cards & Layout ---------- */
-  .card{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:18px;
-    padding:14px;
-    box-shadow:0 2px 10px rgba(0,0,0,.04);
-  }
-  .card h3{margin:0 0 10px;font-size:15px;font-weight:800}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-  .row{display:flex;gap:10px;align-items:center}
-  .row>*{flex:1}
-  .right{display:flex;justify-content:flex-end}
-  .space{height:12px}
-  .muted{color:var(--muted)}
+    .btn{
+      padding:9px 12px;
+      border-radius:12px;
+      border:1px solid #111;
+      background:#fff;
+      color:#111;
+      cursor:pointer;
+      font-size:13px;
+    }
+    .btn.primary{background:#111;color:#fff}
+    .btn.ghost{background:transparent}
+    .btn.danger{border-color:#a00;color:#a00;background:transparent}
 
-  /* ---------- Inputs / Buttons ---------- */
-  input,select{
-    width:100%;
-    background:#fff;color:var(--fg);
-    border:1.5px solid #cfcfcf;
-    padding:10px 12px;border-radius:12px;
-    outline:none;
-  }
-  input::placeholder{color:#a8a8a8}
+    input,select{
+      background:#fff;border:1px solid #111;color:#111;
+      padding:9px 10px;border-radius:12px;width:100%;
+    }
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px dashed #ddd;padding:8px;text-align:left}
+    tfoot td{font-weight:700}
+    .muted{color:var(--muted)}
+    .pill{
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid var(--black);
+      background:#fff;
+      color:var(--black);
+      font-size:13px;
+    }
+    .space{height:10px}
+    .mini{font-size:12px;color:var(--muted)}
 
-  .btn{
-    padding:10px 14px;border-radius:12px;cursor:pointer;
-    border:1.5px solid var(--black);background:#fff;color:var(--black);
-  }
-  .btn.primary{background:var(--black);color:#fff;border-color:var(--black)}
-  .btn.ghost{background:transparent;border-color:#d3d3d3;color:var(--fg)}
-  .btn.danger{background:#fff;border-color:var(--black);color:var(--black)}
+    /* Subtabs */
+    .subtabs{display:flex;gap:6px;margin-bottom:10px}
+    .subtab{
+      padding:7px 10px;border:1px solid #111;
+      border-radius:10px;background:#fff;cursor:pointer;
+    }
+    .subtab.active{background:#111;color:#fff}
 
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:10px 8px;border-bottom:1px dashed var(--line);text-align:left}
-  tfoot td{font-weight:800}
+    /* ปรับ layout เฉพาะบิลเปิดอยู่ */
+    #openBills .row > *{ flex:0 0 auto; }
+    #openBills .row{ flex-wrap:wrap; gap:10px; align-items:center; }
+    #openBills .total{ margin-left:auto; }
 
-  .notice{background:var(--raised);color:#333;border:1px solid var(--line);padding:10px;border-radius:12px}
-
-  /* ---------- ปุ่มเมนูอาหาร (ก้อนดำ) ---------- */
-  #menuPanels .card{ background:#fafafa; border:1px solid #e5e5e5 }
-  #menuPanels .card button,
-  #menuPanels .card .btn,
-  #menuPanels .card .item,
-  #menuPanels .card .chip{
-    display:block;width:100%;
-    text-align:center;
-    background:var(--black);color:#fff;
-    border:0;border-radius:14px;
-    padding:16px 12px;
-    font-weight:500;
-  }
-
-  /* ---------- ป้ายวงรีรวมราคา ---------- */
-  .pill{
-    padding:6px 10px;border-radius:999px;
-    border:1.5px solid var(--black);
-    background:#fff;color:var(--black);
-  }
   </style>
 </head>
 <body>
-
-  <!-- ====== HEADER (ตามที่ขอ) ====== -->
+  <!-- Header -->
   <header>
-    <div class="wrap header-wrap">
-      <h1 class="header-title">
-        <!-- เปลี่ยน src เป็นไฟล์โลโก้ของคุณ (เช่น LOGO.png ในโฟลเดอร์เดียวกัน) -->
-        <img src="./LOGO NACHAT.png" alt="Nachat Logo" class="header-logo"/>
-        ณฉัตร | Nachat – POS
-      </h1>
-      <div class="sub">
-        หมูกระทะชุดละ 299 + Add-on & เครื่องดื่ม |
-        <span>สรุปยอดขายรายวัน / สัปดาห์ / เดือน</span>
-      </div>
+    <div class="header-wrap">
+      <img src="LOGO NACHAT.png" alt="Nachat Logo" class="header-logo" />
+      <h1 class="header-title">ณฉัตร | Nachat – POS</h1>
+      <div class="header-sub">หมูกระทะชุดละ 299 + Add-on & เครื่องดื่ม | สรุปยอดขายรายวัน / สัปดาห์ / เดือน</div>
     </div>
   </header>
 
+  <!-- Main Body -->
   <div class="wrap">
-    <!-- ====== NAV TABS ====== -->
     <div class="tabs">
       <button class="tab active" data-tab="#pos">รับออเดอร์</button>
       <button class="tab" data-tab="#open">โต๊ะ/บิล</button>
@@ -151,7 +130,7 @@
       <button class="tab" data-tab="#settings">ตั้งค่าร้าน</button>
     </div>
 
-    <!-- ====== POS TAB ====== -->
+    <!-- POS TAB -->
     <section id="pos" class="tabpane">
       <div class="card">
         <div class="row">
@@ -162,7 +141,7 @@
       </div>
 
       <div class="space"></div>
-      <div id="menuPanels" class="grid"><!-- เมนูจะ render อัตโนมัติจาก app.js --></div>
+      <div id="menuPanels" class="grid"></div>
 
       <div class="space"></div>
       <div class="card">
@@ -178,26 +157,28 @@
       </div>
     </section>
 
-    <!-- ====== OPEN BILLS TAB ====== -->
+    <!-- OPEN BILLS TAB -->
     <section id="open" class="tabpane" hidden>
-      <div class="card"><h3>บิลที่เปิดอยู่</h3><div id="openBills"></div></div>
+      <div class="card">
+        <h3>บิลที่เปิดอยู่</h3>
+        <div id="openBills"></div>
+      </div>
     </section>
 
-    <!-- ====== REPORTS TAB ====== -->
+    <!-- REPORTS TAB -->
     <section id="reports" class="tabpane" hidden>
       <div class="card">
         <h3>สรุปรายงาน</h3>
         <div class="row">
           <button class="btn" id="btnToday">วันนี้</button>
           <button class="btn" id="btnMonth">เดือนนี้</button>
-          <button class="btn" id="btnPullNow">ดึงจากคลาวด์ทันที</button>
         </div>
         <div class="space"></div>
         <div id="reportBox" class="muted">ยังไม่มีข้อมูล</div>
       </div>
     </section>
 
-    <!-- ====== SETTINGS TAB ====== -->
+    <!-- SETTINGS TAB -->
     <section id="settings" class="tabpane" hidden>
       <div class="subtabs">
         <button class="subtab active" data-sub="#menuSet">ตั้งค่าเมนู</button>
@@ -219,7 +200,7 @@
             </select>
           </div>
           <div class="row" style="gap:8px;margin-bottom:8px">
-            <input id="newName" placeholder="ชื่อเมนูใหม่เร็วๆ"/>
+            <input id="newName" placeholder="ชื่อเมนูใหม่"/>
             <input id="newPrice" type="number" placeholder="ราคา" style="max-width:140px"/>
             <select id="newCat" style="max-width:220px">
               <option value="SET">ชุดหมูกระทะ</option>
@@ -230,18 +211,17 @@
             <input id="newCode" class="col-code" placeholder="รหัส (เช่น Z99)"/>
             <button class="btn primary" id="btnAddMenu">เพิ่ม</button>
           </div>
-          <div id="menuTableBox" class="mini muted">ยังไม่มีเมนู – เพิ่มด้านบนได้เลย</div>
+
+          <div id="menuTableBox" class="mini muted">ยังไม่มีข้อมูล</div>
         </div>
       </div>
 
       <!-- เชื่อมต่อคลาวด์ -->
       <div id="cloudSet" class="subpane" hidden>
         <div class="card">
-          <h3>เชื่อมยอดขายไปยัง Google Sheets (Apps Script)</h3>
-          <div class="notice">วาง <b>Web App URL</b> ที่ลงท้าย <code>/exec</code></div>
-          <div class="space"></div>
+          <h3>เชื่อมต่อ Google Sheets (Apps Script)</h3>
           <div class="row">
-            <input id="inpWebAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+            <input id="inpWebAppUrl" placeholder="https://script.google.com/macros/s/…/exec"/>
             <button class="btn" id="btnSaveUrl">บันทึก</button>
             <button class="btn" id="btnTest">ทดสอบเชื่อมต่อ</button>
           </div>
@@ -253,7 +233,6 @@
     </section>
   </div>
 
-  <!-- ====== Scripts ====== -->
   <script src="app.js"></script>
   <script src="sync.js"></script>
   <script>
