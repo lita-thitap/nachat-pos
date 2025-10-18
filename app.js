@@ -1,228 +1,319 @@
-/* Nachat POS - minimal working cart/bill logic
-   Drop-in replacement for your current app.js
-   - Click menu item -> add to CART
-   - Open bill -> Add cart to current bill
-   - Persist to localStorage
-*/
+/* ============================================================
+ * Nachat POS — App core (offline-first)
+ * ============================================================
+ * - State เก็บใน localStorage ('POS_STATE')
+ * - เมนู: เพิ่ม/ลบ, แสดงตามหมวด
+ * - ตะกร้า -> บิล (เปิด/เพิ่ม/ปิด/ดู)
+ * - รายงาน: วันนี้ / เดือนนี้
+ * - ไม่ใช้ $ เพื่อไม่ชนกับไฟล์อื่น (ใช้ qs/qsa แทน)
+ * ============================================================
+ */
 
-const LS_MENU   = 'NACHAT_MENU_V1';
-const LS_CART   = 'NACHAT_CART_V1';
-const LS_BILLS  = 'NACHAT_BILLS_V1';
-const LS_STATE  = 'NACHAT_STATE_V1'; // openBillId, staff, table
+/* ---------- Utils ---------- */
+const qs  = (sel, el=document) => el.querySelector(sel);
+const qsa = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+const money = (n) => '฿'+ Number(n||0).toLocaleString('th-TH');
+const uid = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
 
-const $ = (sel, el=document)=>el.querySelector(sel);
-const $$ = (sel, el=document)=>[...el.querySelectorAll(sel)];
-
-// ---------- State ----------
-let MENU  = load(LS_MENU)  || [];        // [{code,name,price,cat}]
-let CART  = load(LS_CART)  || [];        // [{code,name,price,qty}]
-let BILLS = load(LS_BILLS) || [];        // [{id,table,staff,status,items,total,createdAt,updatedAt}]
-let STATE = load(LS_STATE) || { openBillId:null, staff:'', table:'' };
-
-// ---------- Utils ----------
-function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
-function load(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch{ return null; } }
-function money(n){ return Number(n||0).toLocaleString('th-TH'); }
-function nowISO(){ return new Date().toISOString(); }
-function uid(){ return Math.random().toString(36).slice(2,10); }
-
-// ---------- Seed example menu if empty ----------
-if (MENU.length===0) {
-  MENU = [
-    // SET
-    { code:'SET01', name:'ชุดหมูกระทะ (2–3 คน)', price:299, cat:'SET' },
-    { code:'SET02', name:'ชุดหมูกระทะ (4 คน)',   price:499, cat:'SET' },
-    // AD
-    { code:'AD01',  name:'สันคอหมูสไลซ์ (ถาด)',  price:79,  cat:'AD'  },
-    { code:'AD02',  name:'เบคอนรมควัน (ถาด)',    price:89,  cat:'AD'  },
-    { code:'AD03',  name:'กุ้ง (ถาด)',            price:99,  cat:'AD'  },
-    // DW
-    { code:'DW01',  name:'น้ำเปล่า (ขวด)',        price:15,  cat:'DW'  },
-    { code:'DW02',  name:'น้ำแข็งถัง',            price:30,  cat:'DW'  },
-    // PR
-    { code:'PR01',  name:'โปรเบียร์ 3 ขวด',      price:210, cat:'PR'  },
-    { code:'PR02',  name:'โปรเบียร์ 6 ขวด',      price:410, cat:'PR'  },
-  ];
-  save(LS_MENU, MENU);
+/* ---------- State ---------- */
+function getState(){
+  try{ return JSON.parse(localStorage.getItem('POS_STATE')||'{}'); }
+  catch(e){ return {}; }
+}
+function setState(st){
+  localStorage.setItem('POS_STATE', JSON.stringify(st));
 }
 
-// ---------- Render Menu (panel by category) ----------
-function groupBy(arr, key){ return arr.reduce((m,x)=>((m[x[key]]??=[]).push(x),m),{}); }
+/* default categories */
+const CATS = [
+  {id:'SET', name:'ชุดหมูกระทะ'},
+  {id:'AD',  name:'Add-on'},
+  {id:'DW',  name:'เครื่องดื่ม'},
+  {id:'PR',  name:'โปรโมชันเครื่องดื่ม'},
+];
 
-function renderMenu(){
-  const panels = $('#menuPanels');
-  if (!panels) return;
-  const groups = groupBy(MENU, 'cat');
-  const order = ['SET','AD','DW','PR'];
-  panels.innerHTML = '';
-
-  order.forEach(cat=>{
-    const items = groups[cat]||[];
-    if (!items.length) return;
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    const h3 = document.createElement('h3');
-    h3.textContent = catName(cat) + `  ${items.length} รายการ`;
-    card.appendChild(h3);
-
-    const box = document.createElement('div');
-    box.style.display = 'grid';
-    box.style.gap = '8px';
-
-    items.forEach(it=>{
-      const btn = document.createElement('button');
-      btn.className = 'btn';
-      btn.style.justifyContent = 'space-between';
-      btn.style.display = 'flex';
-      btn.style.width = '100%';
-      btn.innerHTML = `<span>${escapeHTML(it.name)}</span><span class="pill">฿${money(it.price)}</span>`;
-      btn.addEventListener('click', ()=> addToCart(it));
-      box.appendChild(btn);
-    });
-
-    card.appendChild(box);
-    panels.appendChild(card);
-  });
-}
-
-function catName(c){
-  return ({SET:'ชุดหมูกระทะ', AD:'Add-on', DW:'เครื่องดื่ม', PR:'โปรเครื่องดื่ม'})[c] || c;
-}
-function escapeHTML(s){ return s?.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-
-// ---------- Cart ----------
-function addToCart(item){
-  const row = CART.find(x=>x.code===item.code);
-  if (row) row.qty += 1;
-  else CART.push({ code:item.code, name:item.name, price:item.price, qty:1 });
-  save(LS_CART, CART);
-  renderCart();
-}
-
-function clearCart(){
-  CART = [];
-  save(LS_CART, CART);
-  renderCart();
-}
-
-function cartTotal(){
-  return CART.reduce((s,x)=>s + x.price*x.qty, 0);
-}
-
-function renderCart(){
-  const list = $('#cartList');
-  const total = $('#cartTotal');
-  if (!list) return;
-
-  if (CART.length===0){
-    list.textContent = 'ยังไม่มีรายการ';
-  }else{
-    const table = document.createElement('table');
-    table.innerHTML = `
-      <thead><tr><th>รายการ</th><th>จำนวน</th><th>ราคา</th></tr></thead>
-      <tbody></tbody>
-    `;
-    const tb = $('tbody', table);
-    CART.forEach((x,i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${escapeHTML(x.name)}</td>
-        <td>
-          <button class="pill" data-a="dec">-</button>
-          <span style="padding:0 8px">${x.qty}</span>
-          <button class="pill" data-a="inc">+</button>
-          <button class="pill" data-a="del" style="margin-left:6px">ลบ</button>
-        </td>
-        <td>฿${money(x.price*x.qty)}</td>
-      `;
-      tb.appendChild(tr);
-      tr.querySelector('[data-a="inc"]').onclick = ()=>{ x.qty++; save(LS_CART,CART); renderCart(); };
-      tr.querySelector('[data-a="dec"]').onclick = ()=>{ x.qty=Math.max(1,x.qty-1); save(LS_CART,CART); renderCart(); };
-      tr.querySelector('[data-a="del"]').onclick = ()=>{ CART.splice(i,1); save(LS_CART,CART); renderCart(); };
-    });
-    list.innerHTML = '';
-    list.appendChild(table);
+/* สร้าง state เริ่มต้น (เฉพาะครั้งแรก) */
+(function bootstrap(){
+  const st = getState();
+  if(!st.menu){
+    st.menu = [
+      {id:uid(), code:'Z299A', name:'ชุดรวมหมูสุดคุ้ม', price:299, cat:'SET'},
+      {id:uid(), code:'Z299B', name:'ชุดหมูอูมามิ',     price:299, cat:'SET'},
+      {id:uid(), code:'P050A', name:'สันคอหมูสไลซ์ (ถาด)', price:50, cat:'AD'},
+      {id:uid(), code:'P050B', name:'เบคอนรมควัน (ถาด)',  price:50, cat:'AD'},
+      {id:uid(), code:'DW015', name:'น้ำเปล่า (ขวด)',   price:15, cat:'DW'},
+      {id:uid(), code:'ICE030', name:'น้ำแข็งถัง',       price:30, cat:'DW'},
+      {id:uid(), code:'PR210', name:'โปรเบียร์ 3 ขวด',  price:210, cat:'PR'},
+      {id:uid(), code:'PR410', name:'โปรเบียร์ 6 ขวด',  price:410, cat:'PR'},
+    ];
   }
-  if (total) total.textContent = money(cartTotal());
+  if(!st.cart)  st.cart  = [];               // [{code,name,price,qty}]
+  if(!st.bills) st.bills = [];               // [{id,table,staff,status,items,openedAt,...}]
+  if(!st.currentBillId) st.currentBillId = '';// id บิลปัจจุบัน (ถ้าอยากใช้)
+  setState(st);
+})();
+
+/* ---------- Menu (POS) ---------- */
+function groupByCat(items){
+  const map = {};
+  for(const c of CATS) map[c.id] = {cat:c, items:[]};
+  for(const it of items){
+    if(!map[it.cat]) map[it.cat] = {cat:{id:it.cat, name:it.cat}, items:[]};
+    map[it.cat].items.push(it);
+  }
+  return Object.values(map).filter(g=>g.items.length);
 }
 
-// ---------- Bills ----------
-function openBill(){
-  const table = $('#inpTable')?.value?.trim();
-  const staff = $('#inpStaff')?.value?.trim();
-  if (!table){ alert('กรุณากรอกหมายเลขโต๊ะ'); return; }
-  if (!staff){ alert('กรุณากรอกชื่อพนักงาน'); return; }
+function renderMenuPanels(){
+  const box = qs('#menuPanels');
+  if(!box) return;
+  const st = getState();
+  const groups = groupByCat(st.menu||[]);
+  if(!groups.length){ box.innerHTML = `<div class="muted">ยังไม่มีเมนู – เพิ่มจากแท็บ “ตั้งค่าเมนู”</div>`; return; }
 
-  const id = uid();
-  const bill = {
-    id, table, staff,
+  box.innerHTML = groups.map(g=>{
+    const head = `${g.cat.name} <span class="mini muted">${g.items.length} รายการ</span>`;
+    const list = g.items.map(it=>`
+      <button class="card" data-addcode="${it.code}" style="text-align:left">
+        <div class="row" style="gap:8px;align-items:center">
+          <div style="flex:1">${it.name}</div>
+          <div class="pill">${money(it.price)}</div>
+        </div>
+      </button>
+    `).join('');
+    return `
+      <div class="card">
+        <h3>${head}</h3>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+          ${list}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* เพิ่มสินค้าเข้าตะกร้า */
+qs('#menuPanels')?.addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-addcode]');
+  if(!btn) return;
+  const code = btn.dataset.addcode;
+  const st = getState();
+  const item = (st.menu||[]).find(m=>m.code===code);
+  if(!item) return;
+  const i = (st.cart||[]).findIndex(c=>c.code===code);
+  if(i<0) st.cart.push({code:item.code, name:item.name, price:Number(item.price||0), qty:1});
+  else    st.cart[i].qty += 1;
+  setState(st);
+  renderCart();
+});
+
+/* ---------- Cart ---------- */
+function renderCart(){
+  const list = qs('#cartList');
+  const sumEl = qs('#cartTotal');
+  if(!list || !sumEl) return;
+
+  const st = getState();
+  const cart = st.cart||[];
+  if(!cart.length){
+    list.innerHTML = 'ยังไม่มีรายการ';
+    sumEl.textContent = '0';
+    return;
+  }
+  const rows = cart.map(c=>`• ${c.name} x${c.qty} = ${money(c.qty*c.price)}`).join('<br/>');
+  const total = cart.reduce((s,it)=> s + it.qty*it.price, 0);
+  list.innerHTML = rows;
+  sumEl.textContent = total.toLocaleString('th-TH');
+}
+
+qs('#btnClearCart')?.addEventListener('click', ()=>{
+  const st = getState();
+  st.cart = [];
+  setState(st);
+  renderCart();
+});
+
+qs('#btnAddToBill')?.addEventListener('click', ()=>{
+  const st = getState();
+  if(!(st.cart||[]).length){ alert('ยังไม่มีรายการในตะกร้า'); return; }
+
+  // หากยังไม่มีบิลปัจจุบัน ให้บังคับเปิดก่อน
+  let bill = st.bills.find(b=>b.id===st.currentBillId && (b.status||'open')==='open');
+  if(!bill){
+    const table = (qs('#inpTable')?.value||'').trim();
+    const staff = (qs('#inpStaff')?.value||'').trim();
+    if(!table){ alert('กรุณาระบุโต๊ะก่อน'); return; }
+    bill = {
+      id: uid(),
+      table, staff,
+      status:'open',
+      items:[],
+      openedAt: Date.now()
+    };
+    st.bills.push(bill);
+    st.currentBillId = bill.id;
+  }
+
+  // ย้าย cart เข้า bill
+  const map = new Map();
+  (bill.items||[]).forEach(x=> map.set(x.code, {...x}));
+  for(const c of st.cart){
+    const k = c.code;
+    if(!map.has(k)) map.set(k,{code:c.code,name:c.name,price:c.price,qty:0});
+    const x = map.get(k);
+    x.qty += c.qty;
+    map.set(k,x);
+  }
+  bill.items = Array.from(map.values());
+  st.cart = [];
+  setState(st);
+  renderCart();
+  alert('เพิ่มลงบิลแล้ว');
+  renderOpenBills();
+});
+
+/* ---------- Open Bill ---------- */
+qs('#btnOpenBill')?.addEventListener('click', ()=>{
+  const table = (qs('#inpTable')?.value||'').trim();
+  const staff = (qs('#inpStaff')?.value||'').trim();
+  if(!table){ alert('กรุณาระบุโต๊ะ'); return; }
+
+  const st = getState();
+  // ถ้ามีบิลโต๊ะเดียวกันที่ยังเปิดอยู่ไม่ให้ซ้ำ
+  const dup = (st.bills||[]).find(b=> (b.status||'open')==='open' && (b.table||'')===table);
+  if(dup){ alert(`โต๊ะ ${table} มีบิลเปิดค้างอยู่แล้ว`); return; }
+
+  const b = {
+    id: uid(),
+    table, staff,
     status:'open',
     items:[],
-    total:0,
-    createdAt: nowISO(),
-    updatedAt: nowISO(),
+    openedAt: Date.now()
   };
-  BILLS.push(bill);
-  STATE.openBillId = id;
-  STATE.table = table; STATE.staff = staff;
-  save(LS_BILLS,BILLS); save(LS_STATE,STATE);
+  st.bills.push(b);
+  st.currentBillId = b.id;
+  setState(st);
+  alert(`เปิดบิลโต๊ะ ${table} แล้ว`);
   renderOpenBills();
-  alert('เปิดบิลโต๊ะ '+table+' เรียบร้อย');
+});
+
+function sumBill(bill){
+  if (Array.isArray(bill.items) && bill.items.length){
+    return bill.items.reduce((s,it)=> s + (Number(it.qty||0)*Number(it.price||0)), 0);
+  }
+  return Number(bill.total||0);
 }
 
-function addCartToCurrentBill(){
-  if (CART.length===0){ alert('ตะกร้าว่าง'); return; }
-  const bill = BILLS.find(b=>b.id===STATE.openBillId && b.status==='open');
-  if (!bill){ alert('กรุณา “เปิดบิล” ก่อน'); return; }
+function viewBill(billId){
+  const st = getState();
+  const b = (st.bills||[]).find(x=>x.id===billId);
+  if(!b){ alert('ไม่พบบิล'); return; }
+  const lines = (b.items||[]).map(it=>`• ${it.name} x${it.qty} = ${money(it.qty*it.price)}`).join('\n');
+  alert(`โต๊ะ ${b.table||'-'} · ${b.staff||'-'}\n\n${lines||'(ยังไม่มีรายการ)'}\n\nรวม ${money(sumBill(b))}`);
+}
 
-  // merge
-  CART.forEach(x=>{
-    const row = bill.items.find(i=>i.code===x.code);
-    if (row) row.qty += x.qty;
-    else bill.items.push({ code:x.code, name:x.name, price:x.price, qty:x.qty });
-  });
-  bill.total = bill.items.reduce((s,x)=>s+x.price*x.qty,0);
-  bill.updatedAt = nowISO();
+function closeBill(billId){
+  const st = getState();
+  const idx = (st.bills||[]).findIndex(x=>x.id===billId);
+  if(idx<0){ alert('ไม่พบบิล'); return; }
+  const b = st.bills[idx];
+  const total = sumBill(b);
 
-  clearCart();
-  save(LS_BILLS,BILLS);
+  let method = prompt('วิธีชำระ (CASH / TRANSFER / QR / CARD):', 'CASH');
+  if(!method) return;
+  method = method.toUpperCase();
+
+  let received = total;
+  if(method==='CASH'){
+    const raw = prompt(`รับเงินมาเท่าไหร่? (รวม ${money(total)})`, String(total));
+    if(raw===null) return;
+    received = Number(raw||0);
+    if(isNaN(received) || received<total){ alert('รับเงินน้อยกว่ายอดรวม'); return; }
+  }
+  const change = Math.max(0, received-total);
+
+  st.bills[idx] = {
+    ...b,
+    status:'closed',
+    pay_method:method,
+    received, change,
+    total,
+    closedAt: Date.now()
+  };
+
+  // ถ้ามีระบบ sync คิว -> push เข้า QUEUE ที่นี่ได้ (ปล่อยว่างเพื่อไม่ชนกับไฟล์ sync.js)
+  setState(st);
+  alert(`ปิดบิลสำเร็จ\nวิธีชำระ: ${method}\nรวม: ${money(total)}\nรับมา: ${money(received)}\nทอน: ${money(change)}`);
   renderOpenBills();
-  alert('เพิ่มลงบิลโต๊ะ '+bill.table+' เรียบร้อย');
+  renderReports();
 }
 
 function renderOpenBills(){
-  const box = $('#openBills');
-  if (!box) return;
-  const open = BILLS.filter(b=>b.status==='open');
-  if (open.length===0){ box.textContent = 'ยังไม่มีบิลที่เปิดอยู่'; return; }
+  const box = qs('#openBills');
+  if(!box) return;
+  const st = getState();
+  const bills = (st.bills||[]).filter(b => (b.status||'open')==='open');
 
-  box.innerHTML = '';
-  open.forEach(b=>{
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.innerHTML = `
-      <div class="row" style="justify-content:space-between">
-        <div><b>โต๊ะ ${escapeHTML(b.table)}</b> • ${escapeHTML(b.staff)}</div>
-        <div class="pill">รวม ฿${money(b.total)}</div>
+  if(!bills.length){ box.innerHTML = `<div class="muted">ยังไม่มีบิลที่เปิดอยู่</div>`; return; }
+
+  box.innerHTML = bills.map(b=>{
+    const title = `โต๊ะ ${b.table||'-'} • ${b.staff||'-'}`;
+    return `
+      <div class="card" style="margin-bottom:10px">
+        <div class="row" style="gap:10px;align-items:center">
+          <div class="pill">${title}</div>
+          <div class="pill" style="margin-left:auto">รวม ${money(sumBill(b))}</div>
+          <button class="btn" data-action="view" data-id="${b.id}">ดูรายการ</button>
+          <button class="btn primary" data-action="pay" data-id="${b.id}">ปิดบิล</button>
+        </div>
       </div>
     `;
-    box.appendChild(div);
-  });
+  }).join('');
 }
 
-// ---------- Wire UI ----------
-function initButtons(){
-  $('#btnOpenBill')?.addEventListener('click', openBill);
-  $('#btnAddToBill')?.addEventListener('click', addCartToCurrentBill);
-  $('#btnClearCart')?.addEventListener('click', clearCart);
-  $('#btnToday')?.addEventListener('click', ()=>alert('สรุปรายวัน: ยังไม่ทำในตัวอย่างนี้'));
-  $('#btnMonth')?.addEventListener('click', ()=>alert('สรุปรายเดือน: ยังไม่ทำในตัวอย่างนี้'));
-  $('#btnPullNow')?.addEventListener('click', ()=>alert('ดึงข้อมูลคลาวด์: โปรดตั้งค่าใน sync.js'));
-}
+qs('#openBills')?.addEventListener('click',(e)=>{
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  if(btn.dataset.action==='view') viewBill(id);
+  if(btn.dataset.action==='pay')  closeBill(id);
+});
 
-// ---------- Start ----------
-renderMenu();
-renderCart();
-renderOpenBills();
-initButtons();
+/* ---------- Settings: Menu ---------- */
+function renderMenuTable(){
+  const box = qs('#menuTableBox');
+  if(!box) return;
+
+  const st = getState();
+  const q = (qs('#menuSearch')?.value||'').trim().toLowerCase();
+  const f = (qs('#menuFilter')?.value||'').trim();
+
+  let rows = st.menu||[];
+  if(f) rows = rows.filter(x=>x.cat===f);
+  if(q) rows = rows.filter(x=> (x.name||'').toLowerCase().includes(q) || (x.code||'').toLowerCase().includes(q));
+
+  if(!rows.length){ box.innerHTML = `<div class="muted">ไม่พบเมนูที่ตรงเงื่อนไข</div>`; return; }
+
+  const head = `
+    <table>
+      <thead>
+        <tr>
+          <th>ชื่อเมนู</th>
+          <th class="col-code">รหัส</th>
+          <th class="col-price">ราคา</th>
+          <th>หมวด</th>
+          <th style="width:100px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(x=>`
+          <tr>
+            <td>${x.name}</td>
+            <td>${x.code}</td>
+            <td>${money(x.price)}</td>
+            <td>${(CATS.find(c=>c.id===x.cat)?.name)||x.cat}</td>
+            <td class="actions">
+              <button class="btn danger" data-del="${x.id}">ลบ</button>
+            </td>
+          </tr>
+       
