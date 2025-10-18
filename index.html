@@ -3,71 +3,120 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Nachat POS (Offline‑first)</title>
+  <title>ณฉัตร | Nachat – POS</title>
   <style>
-    /* ====== Dark Cool Theme (like screenshot) ====== */
-    :root{
-      --bg:#000;
-      --panel:#ffffff;
-      --raised:#fafafa;
-      --line:#e6e6e6;
-      --fg:#111111;
-      --muted:#6b6b6b;
-      --accent:#111111;
-      --ok:#111111; --warn:#555555; --danger:#111111;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
+  /* ====== Nachat – POS: Black&White Minimal (ตามภาพ) ====== */
+  :root{
+    --page:#f5f6f7;
+    --panel:#ffffff;
+    --raised:#fafafa;
+    --line:#e9e9e9;
+    --fg:#111111;
+    --muted:#777777;
+    --black:#111111;
+  }
 
-    /* Header */
-    header{display:flex;align-items:center;gap:12px;padding:14px 16px;position:sticky;top:0;z-index:5;
-      background:#fff;border-bottom:1px solid #eaeaea}
-    header h1{font-size:16px;margin:0;font-weight:700}
-    header .brand{display:flex;align-items:center;gap:10px}
-    header svg{height:26px;width:26px;color:#111}
-    .tag{font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:8px;color:var(--muted)}
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;padding:0;
+    background:var(--page);
+    color:var(--fg);
+    font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans Thai",sans-serif;
+  }
 
-    /* Layout */
-    .wrap{max-width:1200px;margin:16px auto;padding:0 14px}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-    .tab{padding:10px 14px;border:1px solid #111;border-radius:12px;background:var(--panel);cursor:pointer;color:#111}
-    .tab.active{outline:2px solid #000;background:var(--raised)}
+  /* ---------- Header ---------- */
+  header{
+    display:flex;align-items:center;gap:14px;
+    padding:18px 18px;
+    position:sticky;top:0;z-index:5;
+    color:#fff;
+    background:linear-gradient(180deg,#1c1c1f 0%, #2a2b2e 100%);
+    border-bottom:1px solid #242526;
+  }
+  header .brand{display:flex;align-items:center;gap:12px}
+  header h1{margin:0;font-size:18px;font-weight:800;color:#fff}
+  header img{width:34px;height:34px;border-radius:50%}
+  .tag{font-size:12px;padding:4px 8px;border-radius:10px;border:1px solid #3a3a3a;color:#e7e7e7}
 
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
-    .card h3{margin:0 0 8px;font-size:15px}
-    .row{display:flex;gap:10px;align-items:center}
-    .row > *{flex:1}
-    .right{display:flex;justify-content:flex-end}
-    .space{height:10px}
+  /* ---------- Layout ---------- */
+  .wrap{max-width:1200px;margin:22px auto;padding:0 16px}
 
-    /* Controls */
-    .btn{padding:9px 12px;border-radius:12px;border:1px solid #111;background:#fff;color:#111;cursor:pointer}
-    .btn.primary{background:#111;color:#fff}
-    .btn.ghost{background:transparent}
-    .btn.danger{border-color:#111;color:#111;background:transparent}
-    input,select{background:#fff;border:1px solid #111;color:#111;padding:9px 10px;border-radius:12px;width:100%}
-    table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px dashed var(--line);padding:9px 8px;text-align:left}
-    tfoot td{font-weight:700}
-    .muted{color:var(--muted)}
-    .pill{padding:5px 8px;border-radius:999px;border:1px solid #111}
-    .notice{background:#f9f9f9;color:#333;border:1px solid #e6e6e6;padding:10px;border-radius:12px}
+  /* Tabs */
+  .tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .tab{
+    padding:10px 16px;border-radius:14px;cursor:pointer;
+    background:#fff;border:1.5px solid var(--black);color:var(--black);
+  }
+  .tab.active{background:var(--black);color:#fff;outline:none}
 
-    /* Menu settings specific */
-    .mini{font-size:12px;color:var(--muted)}
-    .col-code{width:110px}
-    .col-price{width:120px}
-    .actions{display:flex;gap:6px}
-    .subtabs{display:flex;gap:6px;margin-bottom:10px}
-    .subtab{padding:7px 10px;border:1px solid #111;border-radius:10px;background:var(--panel);cursor:pointer;color:#111}
-    .subtab.active{outline:2px solid #000;background:var(--raised)}
+  /* Sub tabs */
+  .subtabs{display:flex;gap:8px;margin-bottom:12px}
+  .subtab{
+    padding:8px 12px;border-radius:10px;cursor:pointer;
+    background:#fff;border:1.5px solid var(--black);color:var(--black)
+  }
+  .subtab.active{background:var(--black);color:#fff;outline:none}
+
+  /* ---------- Card/Panel ---------- */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 2px 10px rgba(0,0,0,.04);
+  }
+  .card h3{margin:0 0 10px;font-size:15px;font-weight:800}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .row{display:flex;gap:10px;align-items:center}
+  .row>*{flex:1}
+  .right{display:flex;justify-content:flex-end}
+  .space{height:12px}
+  .muted{color:var(--muted)}
+
+  /* ---------- Controls / Inputs / Buttons ---------- */
+  input,select{
+    width:100%;
+    background:#fff;color:var(--fg);
+    border:1.5px solid #cfcfcf;
+    padding:10px 12px;border-radius:12px;
+    outline:none;
+  }
+  input::placeholder,select:has(option[value=""]:checked){color:#a8a8a8}
+
+  .btn{
+    padding:10px 14px;border-radius:12px;cursor:pointer;
+    border:1.5px solid var(--black);background:#fff;color:var(--black);
+  }
+  .btn.primary{background:var(--black);color:#fff;border-color:var(--black)}
+  .btn.ghost{background:transparent;border-color:#d3d3d3;color:var(--fg)}
+  .btn.danger{background:#fff;border-color:var(--black);color:var(--black)}
+
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 8px;border-bottom:1px dashed var(--line);text-align:left}
+  tfoot td{font-weight:800}
+
+  .notice{background:var(--raised);color:#333;border:1px solid var(--line);padding:10px;border-radius:12px}
+
+  /* ---------- ปุ่มเมนูอาหาร ---------- */
+  #menuPanels .card button,
+  #menuPanels .card .btn,
+  #menuPanels .card .item,
+  #menuPanels .card .chip{
+    display:block;width:100%;
+    text-align:center;
+    background:var(--black);color:#fff;
+    border:0;border-radius:14px;
+    padding:16px 12px;
+    font-weight:500;
+  }
+  #menuPanels .card{background:#fff;border-color:#eee}
+  .pill{padding:6px 10px;border-radius:999px;border:1.5px solid var(--black);background:#fff;color:var(--black)}
   </style>
 </head>
 <body>
   <header>
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12c3-6 13-6 16 0M6 14c2.2-3.8 9.8-3.8 12 0M9 17h6"/></svg>
+      <img src="https://lita-thitap.github.io/nachat-pos/LOGO.png" alt="logo"/>
       <h1>ณฉัตร | Nachat – POS</h1>
     </div>
     <span class="tag" id="syncState">offline</span>
@@ -81,7 +130,7 @@
       <button class="tab" data-tab="#settings">ตั้งค่าร้าน</button>
     </div>
 
-    <!-- POS TAB: เมนูจะ render อัตโนมัติจากฐานเมนู -->
+    <!-- POS TAB -->
     <section id="pos" class="tabpane">
       <div class="card">
         <div class="row">
@@ -92,7 +141,7 @@
       </div>
 
       <div class="space"></div>
-      <div id="menuPanels" class="grid"><!-- auto --></div>
+      <div id="menuPanels" class="grid"><!-- auto render --></div>
 
       <div class="space"></div>
       <div class="card">
@@ -156,7 +205,6 @@
             <input id="newCode" class="col-code" placeholder="รหัส (เช่น Z99)"/>
             <button class="btn primary" id="btnAddMenu">เพิ่ม</button>
           </div>
-
           <div id="menuTableBox" class="mini muted">กำลังโหลด…</div>
         </div>
       </div>
@@ -168,7 +216,7 @@
           <div class="notice">วาง <b>Web App URL</b> ที่ลงท้าย <code>/exec</code></div>
           <div class="space"></div>
           <div class="row">
-            <input id="inpWebAppUrl" placeholder="https://script.google.com/macros/s/…/exec" />
+            <input id="inpWebAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
             <button class="btn" id="btnSaveUrl">บันทึก</button>
             <button class="btn" id="btnTest">ทดสอบเชื่อมต่อ</button>
           </div>
