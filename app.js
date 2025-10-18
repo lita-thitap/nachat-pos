@@ -316,4 +316,91 @@ function renderMenuTable(){
               <button class="btn danger" data-del="${x.id}">ลบ</button>
             </td>
           </tr>
-       
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  box.innerHTML = head;
+}
+
+// ลบเมนู
+qs('#menuTableBox')?.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-del]');
+  if(!btn) return;
+  const id = btn.dataset.del;
+  if(!confirm('ลบเมนูนี้?')) return;
+  const st = getState();
+  st.menu = (st.menu||[]).filter(x=>x.id!==id);
+  setState(st);
+  renderMenuPanels();
+  renderMenuTable();
+});
+
+// เพิ่มเมนูใหม่
+qs('#btnAddMenu')?.addEventListener('click', ()=>{
+  const name = (qs('#newName')?.value||'').trim();
+  const price = Number(qs('#newPrice')?.value||0);
+  const cat   = (qs('#newCat')?.value||'SET');
+  const code  = (qs('#newCode')?.value||'').trim().toUpperCase();
+  if(!name || !code || isNaN(price) || price<=0){
+    alert('กรอกชื่อ/ราคา/รหัสให้ครบถูกต้อง'); return;
+  }
+  const st = getState();
+  if((st.menu||[]).some(x=>x.code===code)){
+    alert('รหัสซ้ำ'); return;
+  }
+  st.menu.push({id:uid(), name, price, cat, code});
+  setState(st);
+  qs('#newName').value=''; qs('#newPrice').value=''; qs('#newCode').value='';
+  alert(`เพิ่ม "${name}" ลงคลัง (เดโม)`);
+  renderMenuPanels();
+  renderMenuTable();
+});
+
+// ค้นหา/กรองเมนู
+qs('#menuSearch')?.addEventListener('input', renderMenuTable);
+qs('#menuFilter')?.addEventListener('change', renderMenuTable);
+
+/* ---------- Reports ---------- */
+function renderReports(range='today'){
+  const box = qs('#reportBox');
+  if(!box) return;
+
+  const st = getState();
+  const now = new Date();
+  let start = new Date(now);
+
+  if(range==='today'){
+    start.setHours(0,0,0,0);
+  }else if(range==='month'){
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  const bills = (st.bills||[]).filter(b=>{
+    if((b.status||'open')!=='closed') return false;
+    const t = Number(b.closedAt||0);
+    return t>=start.getTime();
+  });
+
+  const total = bills.reduce((s,b)=> s + sumBill(b), 0);
+  const count = bills.length;
+
+  box.innerHTML = `
+    <div class="pill">ช่วง: ${range==='today'?'วันนี้':'เดือนนี้'}</div>
+    <div class="space"></div>
+    <div>จำนวนบิลปิด: <b>${count}</b></div>
+    <div>ยอดรวม: <b>${money(total)}</b></div>
+  `;
+}
+qs('#btnToday')?.addEventListener('click', ()=> renderReports('today'));
+qs('#btnMonth')?.addEventListener('click', ()=> renderReports('month'));
+
+/* ---------- Init ---------- */
+function init(){
+  renderMenuPanels();
+  renderCart();
+  renderOpenBills();
+  renderMenuTable();
+  renderReports('today');
+}
+document.addEventListener('DOMContentLoaded', init);
