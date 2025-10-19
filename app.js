@@ -1,17 +1,17 @@
-/* ========== Nachat POS (Frontend) ========== */
+/* ========== Nachat POS (Frontend) – full ========== */
 /* STORAGE KEYS */
 const K = {
   MENU: 'pos_menu',
   CART: 'pos_cart',
   BILLS: 'pos_bills',
-  SALES: 'pos_sales',
+  SALES: 'pos_sales'
 };
 
 /* Helpers */
-const $ = sel => document.querySelector(sel);
+const $  = sel => document.querySelector(sel);
 const fmt = n => Number(n||0).toLocaleString('th-TH');
 
-/* Menu seed (ครั้งแรก) */
+/* Seed menu ครั้งแรก */
 function seedMenu(){
   if(localStorage.getItem(K.MENU)) return;
   const menu = [
@@ -22,25 +22,22 @@ function seedMenu(){
     {id:'A30',name:'กุ้ง (ถาด)',cat:'AD',price:50},
     {id:'D10',name:'น้ำเปล่า (ขวด)',cat:'DW',price:15},
     {id:'D20',name:'น้ำแข็งถัง',cat:'DW',price:30},
-    {id:'P30',name:'โปรเบียร์ 3 ขวด',cat:'PR',price:210},
-    {id:'P60',name:'โปรเบียร์ 6 ขวด',cat:'PR',price:410},
+    {id:'P30',name:'โปรเบียร์ชิงฟัง 3 ขวด',cat:'PR',price:210},
+    {id:'P60',name:'โปรเบียร์ชิงฟัง 6 ขวด',cat:'PR',price:410},
   ];
   localStorage.setItem(K.MENU, JSON.stringify(menu));
 }
 seedMenu();
 
 /* State accessors */
-const getMenu = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
-const setMenu = v => localStorage.setItem(K.MENU, JSON.stringify(v));
-
-const getCart = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
-const setCart = v => localStorage.setItem(K.CART, JSON.stringify(v));
-
-const getBills= () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
-const setBills= v => localStorage.setItem(K.BILLS, JSON.stringify(v));
-
-const getSales= () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
-const setSales= v => localStorage.setItem(K.SALES, JSON.stringify(v));
+const getMenu  = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
+const setMenu  = v => localStorage.setItem(K.MENU, JSON.stringify(v));
+const getCart  = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
+const setCart  = v => localStorage.setItem(K.CART, JSON.stringify(v));
+const getBills = () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
+const setBills = v => localStorage.setItem(K.BILLS, JSON.stringify(v));
+const getSales = () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
+const setSales = v => localStorage.setItem(K.SALES, JSON.stringify(v));
 
 /* ---------- Render Menu (POS) ---------- */
 function groupByCat(arr){
@@ -52,7 +49,7 @@ function groupByCat(arr){
   return m;
 }
 function renderMenu(){
-  const wrap = $('#menuPanels'); if(!wrap) return; wrap.innerHTML = '';
+  const wrap = $('#menuPanels'); wrap.innerHTML = '';
   const menu = getMenu();
   const bycat = groupByCat(menu);
   const CAT_NAMES = {SET:'ชุดหมูกระทะ', AD:'Add-on', DW:'เครื่องดื่ม', PR:'โปรเครื่องดื่ม'};
@@ -78,8 +75,6 @@ function renderMenu(){
 /* ---------- Cart ---------- */
 function renderCart(){
   const list = $('#cartList'); const totalEl = $('#cartTotal');
-  if(!list || !totalEl) return;
-
   const cart = getCart();
   if(!cart.length){ list.textContent = 'ยังไม่มีรายการ'; totalEl.textContent='0'; return; }
 
@@ -96,29 +91,29 @@ function renderCart(){
       <div style="max-width:100px" class="pill">฿${fmt(it.qty*it.price)}</div>
       <div style="max-width:120px"><button class="btn ghost">ลบ</button></div>
     `;
-    const inputs = row.querySelectorAll('input[type=number]');
-    const qtyInput = inputs[0];
-    const priceInput = inputs[1];
-    qtyInput.addEventListener('change',()=>{ it.qty=Math.max(1,Number(qtyInput.value||1)); setCart(cart); renderCart(); });
-    priceInput.addEventListener('change',()=>{ it.price=Math.max(0,Number(priceInput.value||0)); setCart(cart); renderCart(); });
+    const qtyInput = row.querySelector('input[type=number]');
+    const priceInput = row.querySelectorAll('input[type=number]')[1];
+    qtyInput.addEventListener('input',()=>{ it.qty=Math.max(1,Number(qtyInput.value||1)); setCart(cart); renderCart(); });
+    priceInput.addEventListener('input',()=>{ it.price=Math.max(0,Number(priceInput.value||0)); setCart(cart); renderCart(); });
     row.querySelector('button').addEventListener('click',()=>{ cart.splice(i,1); setCart(cart); renderCart(); });
     list.appendChild(row);
   }
   totalEl.textContent = fmt(sum);
 }
+
 $('#btnClearCart')?.addEventListener('click', ()=>{ setCart([]); renderCart(); });
 
-/* ---------- Open Bill ---------- */
+/* ---------- Open/Append Bill ---------- */
 $('#btnOpenBill')?.addEventListener('click', ()=>{
-  const table = $('#inpTable').value.trim()||'N?';
-  const staff = $('#inpStaff').value.trim()||'staff';
+  const table = $('#inpTable').value.trim()||'โต๊ะ?';
+  const staff = $('#inpStaff').value.trim()||'พนักงาน';
   const cart = getCart(); if(!cart.length) return alert('ตะกร้าค่าว่าง');
 
   const total = cart.reduce((a,b)=>a+b.qty*b.price,0);
   const bill = { id: Date.now(), table, staff, items:cart, createdAt:new Date().toISOString(), total };
   const bills=getBills(); bills.push(bill); setBills(bills);
   setCart([]); renderCart();
-  alert(`เปิดบิล โต๊ะ ${table} เรียบร้อย`);
+  alert(`เปิดบิล โต๊ะ ${table} แล้ว`);
   renderOpenBills();
 });
 
@@ -128,40 +123,18 @@ $('#btnAddToBill')?.addEventListener('click', ()=>{
   const cart = getCart(); if(!cart.length) return alert('ตะกร้าค่าว่าง');
   const bills=getBills();
   let bill = bills.find(b=>b.table===table);
-  if(!bill){ bill={id:Date.now(),table,staff:$('#inpStaff').value.trim()||'staff',items:[],createdAt:new Date().toISOString(),total:0}; bills.push(bill); }
+  if(!bill){ bill={id:Date.now(),table,staff:$('#inpStaff').value.trim()||'พนักงาน',items:[],createdAt:new Date().toISOString(),total:0}; bills.push(bill); }
   bill.items.push(...cart); bill.total = bill.items.reduce((s,i)=>s+i.qty*i.price,0);
   setBills(bills); setCart([]); renderCart(); renderOpenBills();
 });
 
-/* bill list + pay modal */
-function renderOpenBills(){
-  const box = $('#openBills'); if(!box) return;
-  const bills = getBills(); box.innerHTML = '';
-  if(!bills.length){ box.innerHTML='<div class="muted">ยังไม่มีบิลที่เปิดอยู่</div>'; return; }
+/* ---------- Pay modal (with QR + print option) ---------- */
+let PAY_BILL = null;
 
-  for(const b of bills){
-    const row = document.createElement('div');
-    row.className='card bill-row';
-    row.innerHTML = `
-      <div>โต๊ะ <b>${b.table}</b> • ${b.staff}</div>
-      <div class="pill">รวม ฿${fmt(b.total)}</div>
-      <button class="btn" data-view="${b.id}">ดูรายการ</button>
-      <button class="btn primary" data-pay="${b.id}">ปิดบิล</button>
-    `;
-    row.querySelector('[data-view]')?.addEventListener('click',()=>{
-      const lines = b.items.map(i=>`• ${i.name} × ${i.qty} = ฿${fmt(i.qty*i.price)}`).join('\n');
-      alert(`รายการของโต๊ะ ${b.table}\n\n${lines}\n\nรวม ฿${fmt(b.total)}`);
-    });
-    row.querySelector('[data-pay]')?.addEventListener('click',()=>openPayModal(b.id));
-    box.appendChild(row);
-  }
-}
-
-/* Payment modal */
-let PAY_BILL=null;
 function openPayModal(billId){
   const b = getBills().find(x=>x.id===billId); if(!b) return;
   PAY_BILL = b;
+
   $('#payTable').value = b.table;
   $('#payStaff').value = b.staff;
   $('#payTotal').value = `฿${fmt(b.total)}`;
@@ -171,24 +144,24 @@ function openPayModal(billId){
   $('#qrBox').hidden = true;
   $('#qrImg').src = '';
   $('#qrNote').textContent = '';
+  $('#chkPrint').checked = false;
+
   $('#payModal').showModal();
 }
 
-/* อัปเดตเงินทอน และแสดง QR เมื่อเลือก “โอน/สแกน” */
 $('#payMethod')?.addEventListener('change', (e)=>{
   const m = e.target.value;
-  if(m==='scan'){
-    const amt = PAY_BILL?.total || 0;
-    const QR_URL = 'qrcode.png'; // ใช้ไฟล์ qrcode.png ใน repo
-    $('#qrImg').src = QR_URL;
-    $('#qrNote').textContent = `KBANK · กรพพร ทรัพย์คงเดช พร้อมเพย์: 0813238287 ยอดที่ต้องโอน ฿${fmt(amt)}`;
-    $('#qrBox').hidden = false;
-    $('#payReceived').value = amt; // โอนเท่ายอดรวม
-    $('#payChange').value = '฿0';
-  }else{
-    $('#qrBox').hidden = true;
-  }
+  $('#qrBox').hidden = (m!=='scan');
+  if(m==='scan') showQRPreview();
 });
+function showQRPreview(){
+  if(!PAY_BILL) return;
+  // ใช้รูป qrcode.png (สามารถเปลี่ยนเป็น DataURL ของ PromptPay ได้)
+  const QR_URL = 'qrcode.png';
+  $('#qrImg').src = QR_URL;
+  $('#qrNote').textContent = `ยอดที่ต้องโอน ฿${fmt(PAY_BILL.total)}`;
+}
+
 $('#payReceived')?.addEventListener('input', ()=>{
   const t = PAY_BILL?.total||0;
   const r = Number($('#payReceived').value||0);
@@ -202,12 +175,14 @@ $('#btnConfirmPay')?.addEventListener('click', (ev)=>{
   const method = $('#payMethod').value;
   const received = Number($('#payReceived').value||0);
   const total = PAY_BILL.total;
-  if(received < total && method==='cash'){
-    return alert('จำนวนเงินไม่พอ (เงินสด)');
+
+  if(method==='cash' && received < total){
+    alert('จำนวนเงินไม่พอ (เงินสด)'); return;
   }
 
   const change = Math.max(0, received-total);
 
+  // สร้าง sale
   const sale = {
     id: 'S'+Date.now(),
     table: PAY_BILL.table,
@@ -219,21 +194,168 @@ $('#btnConfirmPay')?.addEventListener('click', (ev)=>{
   };
   const sales = getSales(); sales.push(sale); setSales(sales);
 
-  if(typeof enqueueSale==='function') enqueueSale(sale); // ให้ sync.js จัดการคิว
+  // ส่งไปคิว Google Sheets ถ้ามี sync.js
+  if(typeof enqueueSale==='function') enqueueSale(sale);
 
-  let bills = getBills(); bills = bills.filter(x=>x.id!==PAY_BILL.id); setBills(bills);
-  PAY_BILL=null;
+  // ลบบิลที่จ่ายเสร็จ
+  let bills = getBills().filter(x=>x.id!==PAY_BILL.id); setBills(bills);
   $('#payModal').close();
-  alert('ปิดบิลสำเร็จ');
   renderOpenBills();
 
-  // ถ้าเปิดแท็บรายงานอยู่ ให้รีเฟรชทันที
-  if (!$('#reports')?.hidden) { renderReports(); }
+  // เลือกพิมพ์บิล
+  if($('#chkPrint').checked){ printBill(sale); }
+
+  PAY_BILL=null;
+  alert('ปิดบิลสำเร็จ');
+});
+
+/* ---------- Edit / Void Bill ---------- */
+let EDIT_BILL = null;
+
+function renderOpenBills(){
+  const box = $('#openBills'); const bills = getBills(); box.innerHTML = '';
+  if(!bills.length){ box.innerHTML='<div class="muted">ยังไม่มีบิลที่เปิดอยู่</div>'; return; }
+
+  for(const b of bills){
+    const row = document.createElement('div');
+    row.className='card bill-row';
+    row.innerHTML = `
+      <div>โต๊ะ <b>${b.table}</b> • ${b.staff}</div>
+      <div class="pill">รวม ฿${fmt(b.total)}</div>
+      <button class="btn" data-edit="${b.id}">แก้ไข</button>
+      <button class="btn ghost" data-void="${b.id}">ยกเลิก</button>
+      <button class="btn primary" data-pay="${b.id}">ปิดบิล</button>
+    `;
+    row.querySelector('[data-edit]')?.addEventListener('click',()=>openEditModal(b.id));
+    row.querySelector('[data-void]')?.addEventListener('click',()=>voidBill(b.id));
+    row.querySelector('[data-pay]')?.addEventListener('click',()=>openPayModal(b.id));
+    box.appendChild(row);
+  }
+}
+
+function voidBill(billId){
+  if(!confirm('ยืนยันยกเลิกบิลนี้?')) return;
+  const rest = getBills().filter(b=>b.id!==billId);
+  setBills(rest);
+  renderOpenBills();
+  alert('ยกเลิกบิลแล้ว');
+}
+
+function openEditModal(billId){
+  const b = getBills().find(x=>x.id===billId); if(!b) return;
+  EDIT_BILL = structuredClone(b);
+
+  $('#editTable').value = EDIT_BILL.table;
+  $('#editStaff').value = EDIT_BILL.staff;
+
+  const wrap = $('#editItems'); wrap.innerHTML='';
+  EDIT_BILL.items.forEach((it,idx)=>{
+    const row = document.createElement('div');
+    row.className='row';
+    row.innerHTML = `
+      <div style="flex:2">${it.name}</div>
+      <div style="max-width:120px"><input type="number" min="1" value="${it.qty}" /></div>
+      <div style="max-width:120px"><input type="number" min="0" value="${it.price}" /></div>
+      <div style="max-width:80px" class="pill">฿${fmt(it.qty*it.price)}</div>
+      <div style="max-width:120px"><button class="btn ghost">ลบ</button></div>
+    `;
+    const qty = row.querySelectorAll('input')[0];
+    const price = row.querySelectorAll('input')[1];
+    qty.addEventListener('input',()=>{ it.qty=Math.max(1,Number(qty.value||1)); updateEditTotal(); row.querySelector('.pill').textContent='฿'+fmt(it.qty*it.price);});
+    price.addEventListener('input',()=>{ it.price=Math.max(0,Number(price.value||0)); updateEditTotal(); row.querySelector('.pill').textContent='฿'+fmt(it.qty*it.price);});
+    row.querySelector('button').addEventListener('click',()=>{ EDIT_BILL.items.splice(idx,1); openEditModal(billId); });
+    wrap.appendChild(row);
+  });
+
+  updateEditTotal();
+  $('#editModal').showModal();
+}
+
+function updateEditTotal(){
+  if(!EDIT_BILL) return;
+  const sum = EDIT_BILL.items.reduce((s,i)=>s+i.qty*i.price,0);
+  EDIT_BILL.total = sum;
+  $('#editTotal').innerHTML = '฿'+fmt(sum);
+}
+
+$('#btnSaveEdit')?.addEventListener('click',(e)=>{
+  e.preventDefault();
+  if(!EDIT_BILL) return;
+
+  EDIT_BILL.table = $('#editTable').value.trim()||EDIT_BILL.table;
+  EDIT_BILL.staff = $('#editStaff').value.trim()||EDIT_BILL.staff;
+
+  const bills = getBills().map(b=> b.id===EDIT_BILL.id ? EDIT_BILL : b);
+  setBills(bills);
+
+  $('#editModal').close();
+  EDIT_BILL=null;
+  renderOpenBills();
+  alert('บันทึกการแก้ไขแล้ว');
+});
+
+/* ---------- Print bill ---------- */
+function printBill(sale){
+  const w = window.open('','_blank','width=380,height=600');
+  const lines = sale.items.map(i=>`
+    <tr>
+      <td>${i.name}</td>
+      <td style="text-align:right">${i.qty}</td>
+      <td style="text-align:right">฿${fmt(i.price)}</td>
+      <td style="text-align:right">฿${fmt(i.qty*i.price)}</td>
+    </tr>`).join('');
+
+  const html = `
+  <html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>ใบเสร็จ</title>
+    <style>
+      body{font:14px/1.4 ui-sans-serif,system-ui;padding:12px}
+      h3{margin:0 0 6px 0;text-align:center}
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:6px 4px;border-bottom:1px dashed #ccc}
+      .right{display:flex;justify-content:flex-end}
+    </style>
+  </head>
+  <body>
+    <h3>ใบเสร็จรับเงิน</h3>
+    โต๊ะ: ${sale.table} • ${sale.staff}<br/>
+    เวลา: ${new Date(sale.createdAt).toLocaleString('th-TH')}<br/><br/>
+
+    <table>
+      <thead><tr><th>รายการ</th><th style="text-align:right">จำนวน</th><th style="text-align:right">ราคา</th><th style="text-align:right">รวม</th></tr></thead>
+      <tbody>${lines}</tbody>
+      <tfoot>
+        <tr><td colspan="3" style="text-align:right"><b>รวม</b></td><td style="text-align:right"><b>฿${fmt(sale.total)}</b></td></tr>
+        <tr><td colspan="3" style="text-align:right">จ่ายด้วย</td><td style="text-align:right">${sale.payment.method.toUpperCase()}</td></tr>
+      </tfoot>
+    </table>
+
+    <div class="right" style="margin-top:8px">ขอบคุณที่อุดหนุน</div>
+    <script>window.onload=()=>window.print();</script>
+  </body>
+  </html>`;
+  w.document.write(html);
+  w.document.close();
+}
+
+/* ---------- Reports (ง่ายๆ) ---------- */
+$('#btnToday')?.addEventListener('click', ()=>{
+  const sales = getSales().filter(s=> new Date(s.createdAt).toDateString() === new Date().toDateString());
+  const sum   = sales.reduce((a,b)=>a+b.total,0);
+  $('#reportBox').textContent=`วันนี้ ${sales.length} บิล | รวม ฿${fmt(sum)}`;
+});
+$('#btnMonth')?.addEventListener('click', ()=>{
+  const now=new Date(); const m=now.getMonth(), y=now.getFullYear();
+  const sales = getSales().filter(s=>{const d=new Date(s.createdAt);return d.getMonth()===m && d.getFullYear()===y});
+  const sum   = sales.reduce((a,b)=>a+b.total,0);
+  $('#reportBox').textContent=`เดือนนี้ ${sales.length} บิล | รวม ฿${fmt(sum)}`;
 });
 
 /* ---------- Settings: menu add / list ---------- */
 function renderMenuTable(){
-  const box = $('#menuTableBox'); if(!box) return;
+  const box = $('#menuTableBox');
   const menu = getMenu();
   if(!menu.length){ box.textContent='ยังไม่มีเมนู — เพิ่มด้านบนได้เลย'; return; }
   const CAT = {SET:'ชุดหมูกระทะ',AD:'Add-on',DW:'เครื่องดื่ม',PR:'โปรเครื่องดื่ม'};
@@ -246,7 +368,7 @@ function renderMenuTable(){
       <td style="text-align:right"><button data-del="${m.id}" class="btn ghost">ลบ</button></td>
     </tr>`).join('');
   box.innerHTML = `
-    <table style="width:100%;border-collapse:collapse">
+    <table>
       <thead><tr><th>รหัส</th><th>ชื่อ</th><th>หมวด</th><th style="text-align:right">ราคา</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -269,92 +391,7 @@ $('#btnAddMenu')?.addEventListener('click', ()=>{
   renderMenuTable(); renderMenu();
 });
 
-/* ---------- REPORTS ---------- */
-function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
-function endOfDay(d){ const x=new Date(d); x.setHours(23,59,59,999); return x; }
-
-function getUIRange() {
-  const preset = $('#selPreset')?.value || 'month';
-  const fromI  = $('#dFrom');
-  const toI    = $('#dTo');
-
-  if (preset === 'custom') {
-    const f = fromI?.value ? startOfDay(fromI.value) : new Date(0);
-    const t = toI?.value   ? endOfDay(toI.value)     : new Date(8640000000000000);
-    return { from:f, to:t };
-  }
-
-  const now = new Date();
-  let from, to;
-
-  if (preset === 'today') {
-    from = startOfDay(now); to = endOfDay(now);
-  } else if (preset === '7d') {
-    to = endOfDay(now); from = startOfDay(new Date(now - 6*24*3600*1000));
-  } else { // 'month'
-    const y = now.getFullYear(), m = now.getMonth();
-    from = new Date(y,m,1,0,0,0,0); to = new Date(y,m+1,0,23,59,59,999);
-  }
-  if (fromI) fromI.value = from.toISOString().slice(0,10);
-  if (toI)   toI.value   = to.toISOString().slice(0,10);
-  return {from,to};
-}
-
-function renderReports() {
-  const sales = getSales();
-  const {from,to} = getUIRange();
-
-  const rows = sales.filter(s=>{
-    const d = new Date(s.createdAt || s.updatedAt || Date.now());
-    return d >= from && d <= to;
-  });
-
-  const sum = rows.reduce((a,b)=>a + Number(b.total||0), 0);
-  const avg = rows.length ? sum/rows.length : 0;
-  $('#kpiSum') && ($('#kpiSum').textContent   = '฿'+fmt(sum));
-  $('#kpiBills') && ($('#kpiBills').textContent = rows.length);
-  $('#kpiAvg') && ($('#kpiAvg').textContent   = '฿'+fmt(avg));
-
-  const map = new Map();
-  rows.forEach(r => (r.items||[]).forEach(it=>{
-    const k = it.name || it.id;
-    map.set(k,(map.get(k)||0)+(Number(it.qty)||1));
-  }));
-  const top = [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const ul = $('#topList');
-  if (ul) ul.innerHTML = top.length
-    ? top.map(([n,q])=>`<li><span>${n}</span><b>${q}</b></li>`).join('')
-    : '<div class="muted">ยังไม่มีข้อมูล</div>';
-
-  const box = $('#salesTableBox');
-  if (box) {
-    if (!rows.length) { box.innerHTML = '<div class="muted">ยังไม่มีข้อมูล</div>'; return; }
-    box.innerHTML = `
-      <table>
-        <thead><tr><th>วันที่เวลา</th><th>โต๊ะ</th>
-          <th style="text-align:right">ยอดสุทธิ</th><th>ชำระ</th></tr></thead>
-        <tbody>
-        ${rows.map(r=>{
-          const d = new Date(r.createdAt||r.updatedAt).toLocaleString('th-TH');
-          const pay = (r.payment?.method||'').toUpperCase();
-          return `<tr>
-            <td>${d}</td><td>${r.table||'-'}</td>
-            <td style="text-align:right">฿${fmt(r.total||0)}</td>
-            <td>${pay}</td>
-          </tr>`;
-        }).join('')}
-        </tbody>
-      </table>`;
-  }
-}
-window.renderReports = renderReports;
-
-// reports events
-$('#selPreset')?.addEventListener('change', renderReports);
-$('#dFrom')?.addEventListener('change', renderReports);
-$('#dTo')?.addEventListener('change', renderReports);
-
 /* ---------- Boot ---------- */
 window.addEventListener('load', ()=>{
-  renderMenu(); renderCart(); renderOpenBills(); renderMenuTable(); renderReports();
+  renderMenu(); renderCart(); renderOpenBills(); renderMenuTable();
 });
