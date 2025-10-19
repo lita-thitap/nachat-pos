@@ -7,7 +7,7 @@ const K = {
   SALES: 'pos_sales',
 };
 
-/* Helpers (ประกาศ $ ที่นี่ครั้งเดียว) */
+/* Helpers */
 const $ = sel => document.querySelector(sel);
 const fmt = n => Number(n||0).toLocaleString('th-TH');
 
@@ -30,16 +30,19 @@ function seedMenu(){
 seedMenu();
 
 /* State accessors */
-const getMenu  = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
-const setMenu  = v => localStorage.setItem(K.MENU, JSON.stringify(v));
-const getCart  = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
-const setCart  = v => localStorage.setItem(K.CART, JSON.stringify(v));
-const getBills = () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
-const setBills = v => localStorage.setItem(K.BILLS, JSON.stringify(v));
-const getSales = () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
-const setSales = v => localStorage.setItem(K.SALES, JSON.stringify(v));
+const getMenu = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
+const setMenu = v => localStorage.setItem(K.MENU, JSON.stringify(v));
 
-/* ---------- Render Menu ---------- */
+const getCart = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
+const setCart = v => localStorage.setItem(K.CART, JSON.stringify(v));
+
+const getBills= () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
+const setBills= v => localStorage.setItem(K.BILLS, JSON.stringify(v));
+
+const getSales= () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
+const setSales= v => localStorage.setItem(K.SALES, JSON.stringify(v));
+
+/* ---------- Render Menu (POS) ---------- */
 function groupByCat(arr){
   const m = new Map();
   for(const it of arr){
@@ -76,6 +79,7 @@ function renderMenu(){
 function renderCart(){
   const list = $('#cartList'); const totalEl = $('#cartTotal');
   if(!list || !totalEl) return;
+
   const cart = getCart();
   if(!cart.length){ list.textContent = 'ยังไม่มีรายการ'; totalEl.textContent='0'; return; }
 
@@ -92,8 +96,9 @@ function renderCart(){
       <div style="max-width:100px" class="pill">฿${fmt(it.qty*it.price)}</div>
       <div style="max-width:120px"><button class="btn ghost">ลบ</button></div>
     `;
-    const qtyInput = row.querySelector('input[type=number]');
-    const priceInput = row.querySelectorAll('input[type=number]')[1];
+    const inputs = row.querySelectorAll('input[type=number]');
+    const qtyInput = inputs[0];
+    const priceInput = inputs[1];
     qtyInput.addEventListener('change',()=>{ it.qty=Math.max(1,Number(qtyInput.value||1)); setCart(cart); renderCart(); });
     priceInput.addEventListener('change',()=>{ it.price=Math.max(0,Number(priceInput.value||0)); setCart(cart); renderCart(); });
     row.querySelector('button').addEventListener('click',()=>{ cart.splice(i,1); setCart(cart); renderCart(); });
@@ -128,7 +133,7 @@ $('#btnAddToBill')?.addEventListener('click', ()=>{
   setBills(bills); setCart([]); renderCart(); renderOpenBills();
 });
 
-/* ---------- Bill list + Pay modal ---------- */
+/* bill list + pay modal */
 function renderOpenBills(){
   const box = $('#openBills'); if(!box) return;
   const bills = getBills(); box.innerHTML = '';
@@ -152,6 +157,7 @@ function renderOpenBills(){
   }
 }
 
+/* Payment modal */
 let PAY_BILL=null;
 function openPayModal(billId){
   const b = getBills().find(x=>x.id===billId); if(!b) return;
@@ -168,17 +174,17 @@ function openPayModal(billId){
   $('#payModal').showModal();
 }
 
-/* อัปเดตเงินทอนและแสดง QR เมื่อเลือก "โอน/สแกน" */
+/* อัปเดตเงินทอน และแสดง QR เมื่อเลือก “โอน/สแกน” */
 $('#payMethod')?.addEventListener('change', (e)=>{
   const m = e.target.value;
   if(m==='scan'){
-    const acct = 'KBANK • กชพร ทรัพย์คงเดช, พร้อมเพย์: 0813238287';
-    const amt  = PAY_BILL?.total || 0;
-    // ใส่ URL QR ของร้าน (ฝากไฟล์รูป QR ไว้ใน repo หรือใช้ลิงก์รูปถาวร)
-    const QR_URL = 'qrcode.png'; // <-- ใส่ไฟล์ qr.png ไว้ใน repo เดียวกัน
+    const amt = PAY_BILL?.total || 0;
+    const QR_URL = 'qrcode.png'; // ใช้ไฟล์ qrcode.png ใน repo
     $('#qrImg').src = QR_URL;
-    $('#qrNote').textContent = acct + `\nยอดที่ต้องโอน ฿${fmt(amt)}`;
+    $('#qrNote').textContent = `KBANK · กรพพร ทรัพย์คงเดช พร้อมเพย์: 0813238287 ยอดที่ต้องโอน ฿${fmt(amt)}`;
     $('#qrBox').hidden = false;
+    $('#payReceived').value = amt; // โอนเท่ายอดรวม
+    $('#payChange').value = '฿0';
   }else{
     $('#qrBox').hidden = true;
   }
@@ -189,7 +195,6 @@ $('#payReceived')?.addEventListener('input', ()=>{
   $('#payChange').value = `฿${fmt(Math.max(0,r-t))}`;
 });
 
-/* ปิดบิล -> บันทึกลง SALES + คิว sync */
 $('#btnConfirmPay')?.addEventListener('click', (ev)=>{
   ev.preventDefault();
   if(!PAY_BILL) return;
@@ -200,6 +205,7 @@ $('#btnConfirmPay')?.addEventListener('click', (ev)=>{
   if(received < total && method==='cash'){
     return alert('จำนวนเงินไม่พอ (เงินสด)');
   }
+
   const change = Math.max(0, received-total);
 
   const sale = {
@@ -213,15 +219,16 @@ $('#btnConfirmPay')?.addEventListener('click', (ev)=>{
   };
   const sales = getSales(); sales.push(sale); setSales(sales);
 
-  // ส่งไปคิว Google Sheets (ถ้ามี sync.js)
-  if(typeof enqueueSale==='function') enqueueSale(sale);
+  if(typeof enqueueSale==='function') enqueueSale(sale); // ให้ sync.js จัดการคิว
 
-  // ลบออกจาก bills
   let bills = getBills(); bills = bills.filter(x=>x.id!==PAY_BILL.id); setBills(bills);
   PAY_BILL=null;
   $('#payModal').close();
   alert('ปิดบิลสำเร็จ');
   renderOpenBills();
+
+  // ถ้าเปิดแท็บรายงานอยู่ ให้รีเฟรชทันที
+  if (!$('#reports')?.hidden) { renderReports(); }
 });
 
 /* ---------- Settings: menu add / list ---------- */
@@ -239,7 +246,7 @@ function renderMenuTable(){
       <td style="text-align:right"><button data-del="${m.id}" class="btn ghost">ลบ</button></td>
     </tr>`).join('');
   box.innerHTML = `
-    <table>
+    <table style="width:100%;border-collapse:collapse">
       <thead><tr><th>รหัส</th><th>ชื่อ</th><th>หมวด</th><th style="text-align:right">ราคา</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -262,23 +269,92 @@ $('#btnAddMenu')?.addEventListener('click', ()=>{
   renderMenuTable(); renderMenu();
 });
 
-/* ---------- Reports (simple) ---------- */
-$('#btnExportCsv')?.addEventListener('click', ()=>{
+/* ---------- REPORTS ---------- */
+function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+function endOfDay(d){ const x=new Date(d); x.setHours(23,59,59,999); return x; }
+
+function getUIRange() {
+  const preset = $('#selPreset')?.value || 'month';
+  const fromI  = $('#dFrom');
+  const toI    = $('#dTo');
+
+  if (preset === 'custom') {
+    const f = fromI?.value ? startOfDay(fromI.value) : new Date(0);
+    const t = toI?.value   ? endOfDay(toI.value)     : new Date(8640000000000000);
+    return { from:f, to:t };
+  }
+
+  const now = new Date();
+  let from, to;
+
+  if (preset === 'today') {
+    from = startOfDay(now); to = endOfDay(now);
+  } else if (preset === '7d') {
+    to = endOfDay(now); from = startOfDay(new Date(now - 6*24*3600*1000));
+  } else { // 'month'
+    const y = now.getFullYear(), m = now.getMonth();
+    from = new Date(y,m,1,0,0,0,0); to = new Date(y,m+1,0,23,59,59,999);
+  }
+  if (fromI) fromI.value = from.toISOString().slice(0,10);
+  if (toI)   toI.value   = to.toISOString().slice(0,10);
+  return {from,to};
+}
+
+function renderReports() {
   const sales = getSales();
-  const header = ['time','table','staff','total','method','received','change'];
-  const lines = [header.join(',')].concat(
-    sales.map(s=>[
-      s.createdAt, s.table, s.staff, s.total, s.payment?.method||'', s.payment?.received||0, s.payment?.change||0
-    ].join(','))
-  );
-  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'sales.csv'; a.click();
-  URL.revokeObjectURL(url);
-});
+  const {from,to} = getUIRange();
+
+  const rows = sales.filter(s=>{
+    const d = new Date(s.createdAt || s.updatedAt || Date.now());
+    return d >= from && d <= to;
+  });
+
+  const sum = rows.reduce((a,b)=>a + Number(b.total||0), 0);
+  const avg = rows.length ? sum/rows.length : 0;
+  $('#kpiSum') && ($('#kpiSum').textContent   = '฿'+fmt(sum));
+  $('#kpiBills') && ($('#kpiBills').textContent = rows.length);
+  $('#kpiAvg') && ($('#kpiAvg').textContent   = '฿'+fmt(avg));
+
+  const map = new Map();
+  rows.forEach(r => (r.items||[]).forEach(it=>{
+    const k = it.name || it.id;
+    map.set(k,(map.get(k)||0)+(Number(it.qty)||1));
+  }));
+  const top = [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const ul = $('#topList');
+  if (ul) ul.innerHTML = top.length
+    ? top.map(([n,q])=>`<li><span>${n}</span><b>${q}</b></li>`).join('')
+    : '<div class="muted">ยังไม่มีข้อมูล</div>';
+
+  const box = $('#salesTableBox');
+  if (box) {
+    if (!rows.length) { box.innerHTML = '<div class="muted">ยังไม่มีข้อมูล</div>'; return; }
+    box.innerHTML = `
+      <table>
+        <thead><tr><th>วันที่เวลา</th><th>โต๊ะ</th>
+          <th style="text-align:right">ยอดสุทธิ</th><th>ชำระ</th></tr></thead>
+        <tbody>
+        ${rows.map(r=>{
+          const d = new Date(r.createdAt||r.updatedAt).toLocaleString('th-TH');
+          const pay = (r.payment?.method||'').toUpperCase();
+          return `<tr>
+            <td>${d}</td><td>${r.table||'-'}</td>
+            <td style="text-align:right">฿${fmt(r.total||0)}</td>
+            <td>${pay}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>`;
+  }
+}
+window.renderReports = renderReports;
+
+// reports events
+$('#selPreset')?.addEventListener('change', renderReports);
+$('#dFrom')?.addEventListener('change', renderReports);
+$('#dTo')?.addEventListener('change', renderReports);
 
 /* ---------- Boot ---------- */
 window.addEventListener('load', ()=>{
-  renderMenu(); renderCart(); renderOpenBills(); renderMenuTable();
+  renderMenu(); renderCart(); renderOpenBills(); renderMenuTable(); renderReports();
 });
