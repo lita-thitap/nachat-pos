@@ -32,23 +32,21 @@
     .row{display:flex;gap:10px;align-items:center}
     .row > *{flex:1}
     .right{display:flex;justify-content:flex-end}
+    .muted{color:var(--muted)}
 
     /* Controls */
     .btn{padding:9px 12px;border-radius:12px;border:1.5px solid var(--black);background:#fff;color:#111;cursor:pointer}
     .btn.primary{background:#111;color:#fff}
     .btn.ghost{background:transparent}
-    input,select,textarea{background:#fff;border:1.5px solid var(--black);color:#111;
-      padding:9px 10px;border-radius:12px;width:100%}
+    input,select{background:#fff;border:1.5px solid var(--black);color:#111;padding:9px 10px;border-radius:12px;width:100%}
     .pill{padding:6px 10px;border-radius:999px;border:1.5px solid var(--black);background:#fff;color:#111}
 
     /* POS buttons */
-    .menu-column .item{background:#111;color:#fff;border-radius:14px;padding:10px 12px;
-      border:1px solid #000;cursor:pointer}
+    .menu-column .item{background:#111;color:#fff;border-radius:14px;padding:10px 12px;border:1px solid #000;cursor:pointer}
     .menu-column .item .price{display:inline-block;margin-left:10px;padding:2px 8px;border-radius:999px;background:#fff;color:#111;border:1px solid #111}
 
     /* Open bills list */
     .bill-row{display:grid;grid-template-columns:1fr 220px 220px 180px;gap:10px;align-items:center}
-    .muted{color:var(--muted)}
 
     /* Subtabs (settings) */
     .subtabs{display:flex;gap:8px;margin-bottom:12px}
@@ -58,6 +56,16 @@
     /* Modal */
     dialog{border:none;border-radius:16px;max-width:520px;width:96%}
     dialog::backdrop{background:rgba(0,0,0,.35)}
+
+    /* Report layout */
+    .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .report-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
+    .kpi h2{margin:0 0 6px 0;font-size:18px}
+    .kpi .big{font-size:34px;font-weight:800}
+    .top-list li{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
   </style>
 </head>
 <body>
@@ -66,7 +74,6 @@
   <header>
     <div class="wrap">
       <div class="head-row">
-        <!-- ใส่โลโก้ไฟล์ของคุณเองใน repo เช่น LOGO NACHAT.png -->
         <img src="LOGO NACHAT.png" alt="Nachat Logo" class="header-logo" />
         <h1>ณฉัตร | Nachat – POS</h1>
       </div>
@@ -83,7 +90,7 @@
   </div>
 
   <div class="content">
-    <!-- POS (order) -->
+    <!-- POS -->
     <section id="pos" class="tabpane">
       <div class="card">
         <div class="row">
@@ -94,7 +101,7 @@
       </div>
 
       <div style="height:8px"></div>
-      <div id="menuPanels" class="grid"><!-- render auto --></div>
+      <div id="menuPanels" class="grid"></div>
 
       <div style="height:8px"></div>
       <div class="card">
@@ -110,7 +117,7 @@
       </div>
     </section>
 
-    <!-- Open bills -->
+    <!-- OPEN BILLS -->
     <section id="open" class="tabpane" hidden>
       <div class="card">
         <h3>บิลที่เปิดอยู่</h3>
@@ -118,75 +125,87 @@
       </div>
     </section>
 
-    <!-- Reports -->
+    <!-- REPORTS -->
     <section id="reports" class="tabpane" hidden>
       <div class="card">
-        <h3>สรุปรายงาน</h3>
-        <div class="row">
-          <button class="btn" id="btnToday">วันนี้</button>
-          <button class="btn" id="btnMonth">เดือนนี้</button>
+        <div class="row" style="gap:8px;align-items:end">
+          <div>
+            <label class="muted">ช่วง</label>
+            <select id="selPreset">
+              <option value="month">เดือนนี้</option>
+              <option value="today">วันนี้</option>
+              <option value="7d">7 วันล่าสุด</option>
+              <option value="custom">กำหนดเอง</option>
+            </select>
+          </div>
+          <div><label class="muted">จาก</label><input type="date" id="dFrom"></div>
+          <div><label class="muted">ถึง</label><input type="date" id="dTo"></div>
+          <div class="right"><button id="btnExportCsv" class="btn">Export CSV</button></div>
         </div>
-        <div style="height:8px"></div>
-        <div id="reportBox" class="muted">ยังไม่มีข้อมูล</div>
+
+        <div style="height:10px"></div>
+
+        <div class="row" style="gap:10px; align-items:center">
+          <div><b>Google Sheets Sync</b><div class="muted">Web App URL (Apps Script)</div></div>
+          <input id="inpWebAppUrl" placeholder="https://script.google.com/macros/s/…/exec" />
+          <select id="selSyncMode" style="max-width:220px">
+            <option value="auto">Auto: ปิดบิลแล้วซิงก์เลย</option>
+            <option value="manual">Manual: ซิงก์เอง</option>
+          </select>
+          <button id="btnSaveUrl" class="btn">บันทึกการตั้งค่า</button>
+          <button id="btnTest" class="btn">ทดสอบเชื่อมต่อ</button>
+          <button id="btnPushPending" class="btn primary">ซิงก์ที่ค้างส่ง</button>
+        </div>
+        <div id="gsStatus" class="muted" style="margin-top:6px"></div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="report-grid">
+        <div class="report-cards">
+          <div class="kpi">
+            <h2>ยอดขายรวม</h2>
+            <div class="big" id="kpiSum">฿0</div>
+            <div class="muted">บิลเฉลี่ย: <span id="kpiAvg">฿0</span></div>
+          </div>
+          <div class="kpi">
+            <h2>จำนวนบิล</h2>
+            <div class="big" id="kpiBills">0</div>
+            <div class="muted">ช่วงที่เลือก</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Top สินค้าขายดี</h3>
+          <ul id="topList" class="top-list" style="list-style:none;padding:0;margin:0"></ul>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="card">
+        <h3>รายการบิล</h3>
+        <div id="salesTableBox">ยังไม่มีข้อมูล</div>
       </div>
     </section>
 
-    <!-- Settings -->
+    <!-- SETTINGS (เฉพาะเมนู) -->
     <section id="settings" class="tabpane" hidden>
-      <div class="subtabs">
-        <button class="subtab active" data-sub="#menuSet">ตั้งค่าเมนู</button>
-        <button class="subtab" data-sub="#cloudSet">เชื่อมต่อ Google Sheets & QR</button>
-      </div>
-
-      <!-- ตั้งค่าเมนู -->
-      <div id="menuSet" class="subpane">
-        <div class="card">
-          <h3>ตั้งค่าเมนู (จัดตามหมวด)</h3>
-          <div class="row" style="gap:8px;margin-bottom:8px">
-            <input id="newName" placeholder="ชื่อเมนูใหม่เร็วๆ" />
-            <input id="newPrice" type="number" placeholder="ราคา" style="max-width:140px" />
-            <select id="newCat" style="max-width:220px">
-              <option value="SET">ชุดหมูกระทะ</option>
-              <option value="AD">Add-on</option>
-              <option value="DW">เครื่องดื่ม</option>
-              <option value="PR">โปรเครื่องดื่ม</option>
-            </select>
-            <input id="newCode" placeholder="รหัส (เช่น Z99)" style="max-width:140px" />
-            <button id="btnAddMenu" class="btn primary">เพิ่ม</button>
-          </div>
-
-          <div id="menuTableBox" class="muted">ยังไม่มีเมนู — เพิ่มด้านบนได้เลย</div>
+      <div class="card">
+        <h3>ตั้งค่าเมนู (จัดตามหมวด)</h3>
+        <div class="row" style="gap:8px;margin-bottom:8px">
+          <input id="newName" placeholder="ชื่อเมนูใหม่เร็วๆ" />
+          <input id="newPrice" type="number" placeholder="ราคา" style="max-width:140px" />
+          <select id="newCat" style="max-width:220px">
+            <option value="SET">ชุดหมูกระทะ</option>
+            <option value="AD">Add-on</option>
+            <option value="DW">เครื่องดื่ม</option>
+            <option value="PR">โปรเครื่องดื่ม</option>
+          </select>
+          <input id="newCode" placeholder="รหัส (เช่น Z99)" style="max-width:140px" />
+          <button id="btnAddMenu" class="btn primary">เพิ่ม</button>
         </div>
-      </div>
-
-      <!-- เชื่อมต่อคลาวด์ + ตั้งค่า QR -->
-      <div id="cloudSet" class="subpane" hidden>
-        <div class="card">
-          <h3>เชื่อมยอดขายไปยัง Google Sheets (Apps Script)</h3>
-          <div class="row">
-            <input id="inpWebAppUrl" placeholder="https://script.google.com/macros/s/…/exec" />
-            <button class="btn" id="btnSaveUrl">บันทึก</button>
-            <button class="btn" id="btnTest">ทดสอบเชื่อมต่อ</button>
-          </div>
-          <div id="gsStatus" class="muted" style="margin-top:6px"></div>
-
-          <div style="height:14px"></div>
-          <h3>ตั้งค่า QR โอน/สแกน</h3>
-          <div class="row">
-            <input id="inpQrUrl" placeholder="URL รูป QR (เช่น qr.png หรือ https://...)" />
-            <input id="inpPayNote" placeholder="ข้อความใต้ภาพ (เช่น พร้อมเพย์ 081-xxxxxxx (KBANK))" />
-            <button class="btn" id="btnSaveQr">บันทึก QR</button>
-          </div>
-          <div class="row" style="margin-top:6px">
-            <img id="qrPreviewSetting" style="max-height:120px;border:1px solid #ddd;border-radius:10px" alt="preview"/>
-            <div id="qrNoteSetting" class="muted"></div>
-          </div>
-
-          <div style="height:8px"></div>
-          <div class="row">
-            <button class="btn ghost" id="btnClearLocal">ล้างข้อมูลในเครื่องนี้</button>
-          </div>
-        </div>
+        <div id="menuTableBox" class="muted">ยังไม่มีเมนู — เพิ่มด้านบนได้เลย</div>
       </div>
     </section>
   </div>
@@ -210,13 +229,10 @@
         <input id="payReceived" type="number" placeholder="รับเงินมา (บาท)" />
         <input id="payChange" readonly placeholder="เงินทอน" />
       </div>
-
-      <!-- โชว์ QR เมื่อเลือกโอน/สแกน -->
       <div id="qrBox" class="row" style="margin-top:6px" hidden>
         <img id="qrImg" alt="QR" style="max-height:140px;border-radius:10px;border:1px solid #ddd" />
         <div id="qrNote" class="muted" style="margin-left:10px"></div>
       </div>
-
       <div class="right" style="gap:8px;margin-top:10px">
         <button class="btn" value="cancel">ยกเลิก</button>
         <button id="btnConfirmPay" class="btn primary" value="ok">ปิดบิล</button>
@@ -224,22 +240,14 @@
     </form>
   </dialog>
 
-  <!-- tabs / subtabs -->
   <script>
+    // Tabs
     document.querySelectorAll('.tab').forEach(btn=>{
       btn.addEventListener('click',()=>{
         document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
         btn.classList.add('active');
         document.querySelectorAll('.tabpane').forEach(p=>p.hidden=true);
         document.querySelector(btn.dataset.tab).hidden=false;
-      });
-    });
-    document.querySelectorAll('.subtab').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        document.querySelectorAll('.subtab').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('.subpane').forEach(p=>p.hidden=true);
-        document.querySelector(btn.dataset.sub).hidden=false;
       });
     });
   </script>
