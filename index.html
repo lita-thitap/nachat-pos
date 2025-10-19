@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Nachat POS</title>
-  <link rel="icon" type="image/png" href="nachatlogo.png">
+  <!-- favicon ใช้โลโก้ใน repo -->
+  <link rel="icon" type="image/png" href="nachatlogo.png" />
   <style>
     :root{
       --bg:#111; --bg2:#1e1e1e; --panel:#fff; --raised:#fafafa; --line:#e9e9e9;
@@ -13,7 +14,6 @@
     *{box-sizing:border-box}
     html,body{margin:0;background:var(--bg);color:var(--black);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
 
-    /* Header */
     header{background:linear-gradient(#1c1c1c,#1a1a1a);color:#fff;border-bottom:1px solid #000}
     .wrap{max-width:1200px;margin:0 auto;padding:16px}
     .head-row{display:flex;align-items:center;gap:12px;justify-content:center}
@@ -21,13 +21,11 @@
     h1{margin:0;font-size:24px;font-weight:800}
     .sub{margin-top:6px;text-align:center;color:#d5d5d5}
 
-    /* Tabs */
     .tabs{display:flex;gap:8px;flex-wrap:wrap;max-width:1200px;margin:16px auto 0;padding:0 16px}
     .tab{padding:10px 14px;border:1.5px solid var(--black);border-radius:12px;background:#fff;cursor:pointer}
     .tab.active{outline:2px solid var(--black);background:var(--raised)}
     .content{max-width:1200px;margin:12px auto;padding:0 16px 32px}
 
-    /* Cards / grid */
     .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
     .row{display:flex;gap:10px;align-items:center}
@@ -35,30 +33,17 @@
     .right{display:flex;justify-content:flex-end}
     .muted{color:var(--muted)}
 
-    /* Controls */
     .btn{padding:9px 12px;border-radius:12px;border:1.5px solid var(--black);background:#fff;color:#111;cursor:pointer}
     .btn.primary{background:#111;color:#fff}
     .btn.ghost{background:transparent}
     input,select{background:#fff;border:1.5px solid var(--black);color:#111;padding:9px 10px;border-radius:12px;width:100%}
     .pill{padding:6px 10px;border-radius:999px;border:1.5px solid var(--black);background:#fff;color:#111}
 
-    /* POS buttons */
     .menu-column .item{background:#111;color:#fff;border-radius:14px;padding:10px 12px;border:1px solid #000;cursor:pointer}
     .menu-column .item .price{display:inline-block;margin-left:10px;padding:2px 8px;border-radius:999px;background:#fff;color:#111;border:1px solid #111}
 
-    /* Open bills list */
     .bill-row{display:grid;grid-template-columns:1fr 220px 220px 180px;gap:10px;align-items:center}
 
-    /* Subtabs (settings) */
-    .subtabs{display:flex;gap:8px;margin-bottom:12px}
-    .subtab{padding:8px 10px;border:1.5px solid var(--black);border-radius:10px;background:#fff;cursor:pointer}
-    .subtab.active{outline:2px solid var(--black);background:var(--raised)}
-
-    /* Modal */
-    dialog{border:none;border-radius:16px;max-width:520px;width:96%}
-    dialog::backdrop{background:rgba(0,0,0,.35)}
-
-    /* Report layout */
     .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .report-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
@@ -67,11 +52,13 @@
     .top-list li{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
+
+    dialog{border:none;border-radius:16px;max-width:520px;width:96%}
+    dialog::backdrop{background:rgba(0,0,0,.35)}
   </style>
 </head>
 <body>
 
-  <!-- Header -->
   <header>
     <div class="wrap">
       <div class="head-row">
@@ -82,7 +69,6 @@
     </div>
   </header>
 
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" data-tab="#pos">รับออเดอร์</button>
     <button class="tab" data-tab="#open">โต๊ะ/บิล</button>
@@ -190,7 +176,7 @@
       </div>
     </section>
 
-    <!-- SETTINGS (เฉพาะเมนู) -->
+    <!-- SETTINGS -->
     <section id="settings" class="tabpane" hidden>
       <div class="card">
         <h3>ตั้งค่าเมนู (จัดตามหมวด)</h3>
@@ -211,64 +197,46 @@
     </section>
   </div>
 
- <!-- Pay modal -->
-<dialog id="payModal">
-  <form method="dialog" class="card" style="border:none">
-    <h3>ปิดบิล</h3>
-
-    <div class="row">
-      <div>
-        <label class="muted">โต๊ะ</label>
-        <input id="payTable" readonly />
+  <!-- Pay modal -->
+  <dialog id="payModal">
+    <form method="dialog" class="card" style="border:none">
+      <h3>ปิดบิล</h3>
+      <div class="row">
+        <div><label class="muted">โต๊ะ</label><input id="payTable" readonly /></div>
+        <div><label class="muted">พนักงาน</label><input id="payStaff" readonly /></div>
       </div>
-      <div>
-        <label class="muted">พนักงาน</label>
-        <input id="payStaff" readonly />
+      <div style="height:6px"></div>
+      <div><label class="muted">ยอดรวมทั้งหมด</label><input id="payTotal" readonly /></div>
+      <div style="height:6px"></div>
+      <div class="row">
+        <div style="flex:1">
+          <label class="muted">วิธีชำระเงิน</label>
+          <select id="payMethod" style="width:100%">
+            <option value="cash">เงินสด</option>
+            <option value="scan">โอน/สแกน</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label class="muted">รับเงิน</label>
+          <input id="payReceived" type="number" placeholder="รับเงินมา (บาท)" />
+        </div>
+        <div style="flex:1">
+          <label class="muted">เงินทอน</label>
+          <input id="payChange" readonly placeholder="฿0" />
+        </div>
       </div>
-    </div>
 
-    <div style="height:6px"></div>
-
-    <div>
-      <label class="muted">ยอดรวมทั้งหมด</label>
-      <input id="payTotal" readonly />
-    </div>
-
-    <div style="height:6px"></div>
-
-    <div class="row">
-      <div style="flex:1">
-        <label class="muted">วิธีชำระเงิน</label>
-        <select id="payMethod" style="width:100%">
-          <option value="cash">เงินสด</option>
-          <option value="scan">โอน/สแกน</option>
-        </select>
+      <div id="qrBox" class="row" style="margin-top:6px" hidden>
+        <img id="qrImg" alt="QR" style="max-height:140px;border-radius:10px;border:1px solid #ddd" />
+        <div id="qrNote" class="muted" style="margin-left:10px"></div>
       </div>
-      <div style="flex:1">
-        <label class="muted">รับเงิน</label>
-        <input id="payReceived" type="number" placeholder="รับเงินมา (บาท)" />
-      </div>
-      <div style="flex:1">
-        <label class="muted">เงินทอน</label>
-        <input id="payChange" readonly placeholder="฿0" />
-      </div>
-    </div>
 
-    <div id="qrBox" class="row" style="margin-top:6px" hidden>
-      <img
-        id="qrImg"
-        alt="QR"
-        style="max-height:140px;border-radius:10px;border:1px solid #ddd"
-      />
-      <div id="qrNote" class="muted" style="margin-left:10px"></div>
-    </div>
-
-    <div class="right" style="gap:8px;margin-top:10px">
-      <button class="btn" value="cancel">ยกเลิก</button>
-      <button id="btnConfirmPay" class="btn primary" value="ok">ปิดบิล</button>
-    </div>
-  </form>
-</dialog>
+      <div class="right" style="gap:8px;margin-top:10px">
+        <button class="btn" value="cancel">ยกเลิก</button>
+        <button id="btnConfirmPay" class="btn primary" value="ok">ปิดบิล</button>
+      </div>
+    </form>
+  </dialog>
 
   <script>
     // Tabs
