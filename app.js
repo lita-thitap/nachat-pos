@@ -1,326 +1,357 @@
-/* ========== Nachat POS (Frontend) — cash/scan + QR ========== */
-/* STORAGE KEYS */
-const K = {
-  MENU: 'pos_menu',
-  CART: 'pos_cart',
-  BILLS: 'pos_bills',
-  SALES: 'pos_sales',
-  QR_TEXT: 'pos_qr_text'
-};
+/* =========================
+   Nachat – POS (offline-first)
+   ========================= */
 
-/* Helpers */
-const $ = sel => document.querySelector(sel);
-const fmt = n => Number(n||0).toLocaleString('th-TH');
+/* ---------- CONFIG ---------- */
+// ข้อความ/เลขพร้อมเพย์ที่ใช้ทำ QR สแกนจ่าย (แก้ตามจริง)
+const POS_QR_TEXT = "พร้อมเพย์ 08x-xxx-xxxx | Nachat BBQ";
 
-/* Menu seed */
-function seedMenu(){
-  if(localStorage.getItem(K.MENU)) return;
-  const menu = [
-    {id:'Z99',name:'ชุดรวมหมูถาด',cat:'SET',price:299},
-    {id:'Z98',name:'ชุดหมูทะเล',cat:'SET',price:299},
-    {id:'A10',name:'สันคอหมูสไลซ์ (ถาด)',cat:'AD',price:50},
-    {id:'A20',name:'เบคอนรมควัน (ถาด)',cat:'AD',price:50},
-    {id:'A30',name:'กุ้ง (ถาด)',cat:'AD',price:50},
-    {id:'D10',name:'น้ำเปล่า (ขวด)',cat:'DW',price:15},
-    {id:'D20',name:'น้ำแข็งถัง',cat:'DW',price:30},
-    {id:'P30',name:'โปรเบียร์ชิงฟัง 3 ขวด',cat:'PR',price:210},
-    {id:'P60',name:'โปรเบียร์ชิงฟัง 6 ขวด',cat:'PR',price:410},
-  ];
-  localStorage.setItem(K.MENU, JSON.stringify(menu));
-}
-seedMenu();
+// ตัวอย่างเมนูเริ่มต้น
+const DEFAULT_MENU = [
+  { id:"SET1",  name:"ชุดรวมหมูชุด A",  price:299, cat:"SET" },
+  { id:"SET2",  name:"ชุดหมูยกทะเล",   price:299, cat:"SET" },
+  { id:"AD01",  name:"สันคอหมูสไลซ์ (ถาด)", price:50,  cat:"AD"  },
+  { id:"AD02",  name:"เบคอนรมควัน (ถาด)",  price:50,  cat:"AD"  },
+  { id:"DW01",  name:"น้ำเปล่า (ขวด)",   price:15,  cat:"DW"  },
+  { id:"DW02",  name:"น้ำแข็งถัง",      price:30,  cat:"DW"  },
+  { id:"PR03",  name:"เบียร์ซิกส์ (ขวด)", price:110, cat:"PR"  },
+  { id:"PR06",  name:"โปรเบียร์ทั้ง 6 ขวด", price:410, cat:"PR" },
+];
 
-/* State accessors */
-const getMenu = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
-const setMenu = v => localStorage.setItem(K.MENU, JSON.stringify(v));
+/* ---------- Storage keys ---------- */
+const KEY_MENU   = "pos_menu_v1";
+const KEY_CART   = "pos_cart_v1";
+const KEY_BILLS  = "pos_bills_v1";
+const KEY_SALES  = "pos_sales_v1";
+const KEY_VOIDS  = "pos_voids_v1"; // บิลที่ยกเลิก
 
-const getCart = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
-const setCart = v => localStorage.setItem(K.CART, JSON.stringify(v));
+/* ---------- Helpers ---------- */
+const $  = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const fmt = n => (Number(n)||0).toLocaleString('th-TH');
 
-const getBills= () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
-const setBills= v => localStorage.setItem(K.BILLS, JSON.stringify(v));
+/* ---------- State ---------- */
+let PAY_BILL = null;  // เก็บบิลที่กำลังปิดใน modal
 
-const getSales= () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
-const setSales= v => localStorage.setItem(K.SALES, JSON.stringify(v));
-
-/* ---------- Render Menu (POS) ---------- */
-function groupByCat(arr){
-  const m = new Map();
-  for(const it of arr){
-    if(!m.has(it.cat)) m.set(it.cat, []);
-    m.get(it.cat).push(it);
+/* ---------- Menu & Storage ---------- */
+function ensureMenu(){
+  if(!localStorage.getItem(KEY_MENU)){
+    localStorage.setItem(KEY_MENU, JSON.stringify(DEFAULT_MENU));
   }
-  return m;
 }
+const getMenu   = ()=> JSON.parse(localStorage.getItem(KEY_MENU)||"[]");
+const setMenu   = m  => localStorage.setItem(KEY_MENU, JSON.stringify(m||[]));
+
+const getCart   = ()=> JSON.parse(localStorage.getItem(KEY_CART)||"[]");
+const setCart   = a  => { localStorage.setItem(KEY_CART, JSON.stringify(a||[])); renderCart(); };
+
+const getBills  = ()=> JSON.parse(localStorage.getItem(KEY_BILLS)||"[]");
+const setBills  = a  => { localStorage.setItem(KEY_BILLS, JSON.stringify(a||[])); renderOpenBills(); };
+
+const getSales  = ()=> JSON.parse(localStorage.getItem(KEY_SALES)||"[]");
+const setSales  = a  => localStorage.setItem(KEY_SALES, JSON.stringify(a||[]));
+
+const getVoids  = ()=> JSON.parse(localStorage.getItem(KEY_VOIDS)||"[]");
+const setVoids  = a  => localStorage.setItem(KEY_VOIDS, JSON.stringify(a||[]));
+
+const sumCart = cart => cart.reduce((s,i)=>s + i.price*i.qty, 0);
+
+/* ---------- Render: Menu ---------- */
 function renderMenu(){
-  const wrap = $('#menuPanels'); wrap.innerHTML = '';
-  const menu = getMenu();
-  const bycat = groupByCat(menu);
-  const CAT_NAMES = {SET:'ชุดหมูกระทะ', AD:'Add-on', DW:'เครื่องดื่ม', PR:'โปรเครื่องดื่ม'};
+  const byCat = {};
+  getMenu().forEach(m => (byCat[m.cat] ??= []).push(m));
 
-  for(const [cat, items] of bycat){
-    const col = document.createElement('div');
-    col.className='card menu-column';
-    col.innerHTML = `<h3>${CAT_NAMES[cat]||cat} <span class="muted">${items.length} รายการ</span></h3>`;
-    for(const it of items){
-      const btn = document.createElement('div');
-      btn.className='item';
-      btn.innerHTML = `${it.name} <span class="price">฿${fmt(it.price)}</span>`;
-      btn.addEventListener('click', ()=>{
-        const cart = getCart(); cart.push({id:it.id,name:it.name,price:it.price,qty:1});
-        setCart(cart); renderCart();
-      });
-      col.appendChild(btn);
-    }
-    wrap.appendChild(col);
-  }
-}
+  const box = $("#menuPanels");
+  box.innerHTML = Object.keys(byCat).map(cat=>{
+    const items = byCat[cat].map(i=>(
+      `<button class="menu-btn" data-id="${i.id}">
+        <span class="name">${i.name}</span>
+        <span class="price">฿${fmt(i.price)}</span>
+      </button>`
+    )).join("");
+    const title = ({SET:"ชุดหมูกระทะ", AD:"Add-on", DW:"เครื่องดื่ม", PR:"โปรเครื่องดื่ม"})[cat] || cat;
+    return `<div class="card"><h3>${title}</h3>${items}</div>`;
+  }).join("");
 
-/* ---------- Cart ---------- */
-function renderCart(){
-  const list = $('#cartList'); const totalEl = $('#cartTotal');
-  const cart = getCart();
-  if(!cart.length){ list.textContent = 'ยังไม่มีรายการ'; totalEl.textContent='0'; return; }
-
-  list.innerHTML = '';
-  let sum = 0;
-  for(let i=0;i<cart.length;i++){
-    const it = cart[i]; sum += it.price*it.qty;
-    const row = document.createElement('div');
-    row.className='row';
-    row.innerHTML = `
-      <div>${it.name}</div>
-      <div style="max-width:120px"><input type="number" min="1" value="${it.qty}" /></div>
-      <div style="max-width:120px"><input type="number" min="0" value="${it.price}" /></div>
-      <div style="max-width:100px" class="pill">฿${fmt(it.qty*it.price)}</div>
-      <div style="max-width:120px"><button class="btn ghost">ลบ</button></div>
-    `;
-    const qtyInput = row.querySelector('input[type=number]');
-    const priceInput = row.querySelectorAll('input[type=number]')[1];
-    qtyInput.addEventListener('change',()=>{ it.qty=Math.max(1,Number(qtyInput.value||1)); setCart(cart); renderCart(); });
-    priceInput.addEventListener('change',()=>{ it.price=Math.max(0,Number(priceInput.value||0)); setCart(cart); renderCart(); });
-    row.querySelector('button').addEventListener('click',()=>{ cart.splice(i,1); setCart(cart); renderCart(); });
-    list.appendChild(row);
-  }
-  totalEl.textContent = fmt(sum);
-}
-
-$('#btnClearCart')?.addEventListener('click', ()=>{ setCart([]); renderCart(); });
-
-/* ---------- Open Bill ---------- */
-$('#btnOpenBill')?.addEventListener('click', ()=>{
-  const table = $('#inpTable').value.trim()||'N?';
-  const staff = $('#inpStaff').value.trim()||'staff';
-  const cart = getCart(); if(!cart.length) return alert('ตะกร้าค่าว่าง');
-
-  const total = cart.reduce((a,b)=>a+b.qty*b.price,0);
-  const bill = { id: Date.now(), table, staff, items:cart, createdAt:new Date().toISOString(), total };
-  const bills=getBills(); bills.push(bill); setBills(bills);
-  setCart([]); renderCart();
-  alert(`เปิดบิล โต๊ะ ${table} เรียบร้อย`);
-  renderOpenBills();
-});
-
-$('#btnAddToBill')?.addEventListener('click', ()=>{
-  const table = $('#inpTable').value.trim();
-  if(!table) return alert('กรอกโต๊ะก่อน');
-  const cart = getCart(); if(!cart.length) return alert('ตะกร้าค่าว่าง');
-  const bills=getBills();
-  let bill = bills.find(b=>b.table===table);
-  if(!bill){ bill={id:Date.now(),table,staff:$('#inpStaff').value.trim()||'staff',items:[],createdAt:new Date().toISOString(),total:0}; bills.push(bill); }
-  bill.items.push(...cart); bill.total = bill.items.reduce((s,i)=>s+i.qty*i.price,0);
-  setBills(bills); setCart([]); renderCart(); renderOpenBills();
-});
-
-/* bill list + pay modal */
-function renderOpenBills(){
-  const box = $('#openBills'); const bills = getBills(); box.innerHTML = '';
-  if(!bills.length){ box.innerHTML='<div class="muted">ยังไม่มีบิลที่เปิดอยู่</div>'; return; }
-
-  for(const b of bills){
-    const row = document.createElement('div');
-    row.className='card bill-row';
-    row.innerHTML = `
-      <div>โต๊ะ <b>${b.table}</b> • ${b.staff}</div>
-      <div class="pill">รวม ฿${fmt(b.total)}</div>
-      <button class="btn" data-view="${b.id}">ดูรายการ</button>
-      <button class="btn primary" data-pay="${b.id}">ปิดบิล</button>
-    `;
-    row.querySelector('[data-view]')?.addEventListener('click',()=>{
-      const lines = b.items.map(i=>`• ${i.name} × ${i.qty} = ฿${fmt(i.qty*i.price)}`).join('\n');
-      alert(`รายการของโต๊ะ ${b.table}\n\n${lines}\n\nรวม ฿${fmt(b.total)}`);
+  // add to cart
+  $$("#menuPanels .menu-btn").forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const m = getMenu().find(x=>x.id===btn.dataset.id);
+      if(!m) return;
+      const cart = getCart();
+      const exist = cart.find(x=>x.id===m.id);
+      if(exist) exist.qty += 1;
+      else cart.push({ id:m.id, name:m.name, price:m.price, qty:1 });
+      setCart(cart);
     });
-    row.querySelector('[data-pay]')?.addEventListener('click',()=>openPayModal(b.id));
-    box.appendChild(row);
+  });
+}
+
+/* ---------- Render: Cart ---------- */
+function renderCart(){
+  const cart = getCart();
+  const list = $("#cartList");
+  if(cart.length===0){
+    list.textContent = "ยังไม่มีรายการ";
+  }else{
+    list.innerHTML = cart.map(i=>(
+      `<div class="row" style="justify-content:space-between">
+        <div>${i.name} <span class="hint">× ${i.qty}</span></div>
+        <div>฿${fmt(i.qty*i.price)}</div>
+      </div>`
+    )).join("");
   }
+  $("#cartTotal").textContent = fmt(sumCart(cart));
 }
 
-/* Payment modal with items + QR */
-let PAY_BILL=null;
-function openPayModal(billId){
-  const b = getBills().find(x=>x.id===billId); if(!b) return;
-  PAY_BILL = b;
+/* ---------- Render: Open Bills ---------- */
+function renderOpenBills(){
+  const box = $("#openBills"); if(!box) return;
+  const bills = getBills();
+  if(bills.length===0){ box.innerHTML = `<div class="hint">ยังไม่มีบิล</div>`; return; }
 
-  // Fill basic
-  $('#payTable').value = b.table;
-  $('#payStaff').value = b.staff;
-  $('#payTotal').value = `฿${fmt(b.total)}`;
-  $('#payReceived').value = b.total;
-  $('#payChange').value = '฿0';
-  $('#payMethod').value = 'cash';
+  box.innerHTML = bills.map(b=>(
+    `<div class="bill-row">
+      <div class="bill-title">โต๊ะ <b>${b.table}</b> • ${b.staff}</div>
+      <div class="pill">รวม ฿${fmt(b.total)}</div>
+      <div class="bill-actions">
+        <button class="btn" data-view="${b.id}">ดูรายการ</button>
+        <button class="btn primary" data-pay="${b.id}">ปิดบิล</button>
+        <button class="btn danger" data-cancel="${b.id}">ยกเลิกบิล</button>
+      </div>
+    </div>`
+  )).join("");
 
-  // Items list
-  const tb = $('#payItems');
-  const rows = b.items.map(i=>`<tr><td>${i.name}</td><td style="width:70px;text-align:right">× ${i.qty}</td><td style="width:110px;text-align:right">฿${fmt(i.qty*i.price)}</td></tr>`).join('');
-  tb.innerHTML = `
-    <thead><tr><th>รายการ</th><th style="text-align:right">จำนวน</th><th style="text-align:right">ยอด</th></tr></thead>
-    <tbody>${rows}</tbody>
-    <tfoot><tr><td colspan="2" style="text-align:right">รวม</td><td style="text-align:right">฿${fmt(b.total)}</td></tr></tfoot>
-  `;
-
-  // Hide QR by default
-  $('#qrZone').hidden = true;
-  $('#qrImg').src=''; $('#qrNote').textContent='';
-
-  $('#payModal').showModal();
+  // actions
+  $$("#openBills [data-view]").forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const b = getBills().find(x=>x.id===btn.dataset.view);
+      if(!b) return alert("ไม่พบบิล");
+      const rows = b.items.map(i=>`${i.name} × ${i.qty} = ฿${fmt(i.qty*i.price)}`).join("\n");
+      alert(`โต๊ะ ${b.table}\nพนักงาน: ${b.staff}\n\n${rows}\n\nรวม: ฿${fmt(b.total)}`);
+    });
+  });
+  $$("#openBills [data-pay]").forEach(btn=>{
+    btn.addEventListener('click',()=> openPayModal(btn.dataset.pay));
+  });
+  $$("#openBills [data-cancel]").forEach(btn=>{
+    btn.addEventListener('click',()=> cancelBill(btn.dataset.cancel));
+  });
 }
 
-// change received => change field
-$('#payReceived')?.addEventListener('input', ()=>{
-  const t = PAY_BILL?.total||0;
-  const r = Number($('#payReceived').value||0);
-  $('#payChange').value = `฿${fmt(Math.max(0,r-t))}`;
+/* ---------- Actions: POS ---------- */
+$("#btnOpenBill")?.addEventListener("click", ()=>{
+  const table = $("#inpTable").value.trim();
+  const staff = $("#inpStaff").value.trim();
+  if(!table) return alert("กรุณาใส่หมายเลขโต๊ะ");
+  if(!staff) return alert("กรุณาใส่ชื่อพนักงาน");
+
+  const bills = getBills();
+  const id = Date.now().toString(36);
+  bills.push({ id, table, staff, items:[], total:0, createdAt: Date.now() });
+  setBills(bills);
+  alert(`เปิดบิลสำหรับโต๊ะ ${table} เรียบร้อย`);
 });
 
-// change method => toggle QR
-$('#payMethod')?.addEventListener('change', ()=>{
-  const m = $('#payMethod').value;
-  if(m==='scan'){
-    showQR();
-  }else{
-    $('#qrZone').hidden = true;
-    $('#qrImg').src=''; $('#qrNote').textContent='';
+$("#btnClearCart")?.addEventListener("click", ()=> setCart([]));
+
+$("#btnAddToBill")?.addEventListener("click", ()=>{
+  const cart = getCart();
+  if(cart.length===0) return alert("ตะกร้าว่าง");
+  const bills = getBills();
+  if(bills.length===0) return alert("ยังไม่มีบิลเปิดอยู่ - กด 'เปิดบิล' ก่อน");
+
+  // เพิ่มลงบิลล่าสุด
+  const b = bills[bills.length-1];
+  cart.forEach(c=>{
+    const ex = b.items.find(x=>x.id===c.id);
+    if(ex) ex.qty += c.qty;
+    else b.items.push({...c});
+  });
+  b.total = b.items.reduce((s,i)=>s+i.qty*i.price,0);
+  setBills(bills);
+  setCart([]);
+  alert("เพิ่มลงบิลแล้ว");
+});
+
+/* ---------- Void Bill ---------- */
+function cancelBill(billId){
+  const bills = getBills();
+  const b = bills.find(x=>x.id===billId);
+  if(!b){ alert('ไม่พบบิล'); return; }
+
+  if(!confirm(`ยกเลิกบิลโต๊ะ ${b.table}?`)) return;
+  const reason = prompt('เหตุผลการยกเลิก', 'ลูกค้ายกเลิก/สั่งผิด');
+
+  // เก็บหลักฐาน void
+  const voids = getVoids();
+  voids.push({
+    id:'V'+Date.now(),
+    table:b.table, staff:b.staff, items:b.items, total:b.total,
+    reason: reason||'',
+    canceledAt: Date.now()
+  });
+  setVoids(voids);
+
+  // ลบออกจากรายการบิลเปิดอยู่
+  const idx = bills.findIndex(x=>x.id===billId);
+  if(idx>-1) bills.splice(idx,1);
+  setBills(bills);
+
+  alert('ยกเลิกบิลเรียบร้อย');
+}
+
+/* ---------- Pay modal ---------- */
+let PAY_BILL = null;
+
+function openPayModal(billId){
+  const bills = getBills();
+  const b = bills.find(x=>x.id===billId);
+  if(!b){ alert('ไม่พบบิล'); return; }
+
+  const modal = $("#payModal");
+  if(!modal){ alert('ไม่พบ payModal ใน index.html'); return; }
+
+  $("#payTable")?.setAttribute("value", b.table);
+  $("#payStaff")?.setAttribute("value", b.staff);
+  $("#payTotal")?.setAttribute("value", `฿${fmt(b.total)}`);
+  $("#payReceived")?.setAttribute("value", b.total);
+  $("#payChange")?.setAttribute("value", "฿0");
+  $("#payMethod")?.value = "cash";
+
+  const tb = $("#payItems");
+  if(tb){
+    const rows = b.items.map(i=>(
+      `<tr><td>${i.name}</td><td style="width:70px;text-align:right">× ${i.qty}</td><td style="width:110px;text-align:right">฿${fmt(i.qty*i.price)}</td></tr>`
+    )).join("");
+    tb.innerHTML = `
+      <thead><tr><th>รายการ</th><th style="text-align:right">จำนวน</th><th style="text-align:right">ยอด</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="2" style="text-align:right">รวม</td><td style="text-align:right">฿${fmt(b.total)}</td></tr></tfoot>
+    `;
+  }
+
+  $("#qrZone")?.setAttribute("hidden","hidden");
+  const qi = $("#qrImg"); if(qi) qi.src = "";
+  const qn = $("#qrNote"); if(qn) qn.textContent = "";
+
+  PAY_BILL = b;
+  modal.showModal();
+}
+
+$("#payReceived")?.addEventListener("input", ()=>{
+  const t = PAY_BILL?.total || 0;
+  const r = Number($("#payReceived").value || 0);
+  $("#payChange")?.setAttribute("value", `฿${fmt(Math.max(0, r - t))}`);
+});
+
+$("#payMethod")?.addEventListener("change", ()=>{
+  const m = $("#payMethod").value;
+  if(m==='scan'){ showQR(); }
+  else{
+    $("#qrZone")?.setAttribute("hidden","hidden");
+    const qi = $("#qrImg"); if(qi) qi.src = "";
+    const qn = $("#qrNote"); if(qn) qn.textContent = "";
   }
 });
 
 function showQR(){
-  const textBase = (localStorage.getItem(K.QR_TEXT)||'').trim();
-  if(!textBase){
-    alert('ยังไม่ได้ตั้งค่าข้อความ/เลขพร้อมเพย์สำหรับ QR (ไปที่ ตั้งค่าร้าน > ตั้งค่าการชำระเงิน)');
-    $('#payMethod').value='cash';
-    $('#qrZone').hidden = true;
+  const qrZone = $("#qrZone");
+  const qrImg  = $("#qrImg");
+  const qrNote = $("#qrNote");
+  if(!qrZone || !qrImg || !qrNote){
+    alert('ไม่พบส่วน QR ใน modal');
+    $("#payMethod").value = 'cash';
     return;
   }
-  const amt = PAY_BILL?.total || 0;
-  // สร้างข้อความที่ใส่ใน QR
-  const payload = `PAY TO: ${textBase}\nAMOUNT: ${amt} THB\nTABLE: ${PAY_BILL.table}`;
-  // ใช้ Google Chart API ทำ QR
-  const url = `https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=${encodeURIComponent(payload)}`;
-  $('#qrImg').src = url;
-  $('#qrNote').textContent = `ยอดชำระ ฿${fmt(amt)}  |  ${textBase}`;
-  $('#qrZone').hidden = false;
+  const base = (POS_QR_TEXT||"").trim();
+  if(!base){
+    alert('ยังไม่ได้ตั้งข้อความ/เลขพร้อมเพย์สำหรับ QR (แก้ตัวแปร POS_QR_TEXT ใน app.js)');
+    $("#payMethod").value = 'cash';
+    qrZone.hidden = true;
+    return;
+  }
+  const amt  = PAY_BILL?.total || 0;
+  const text = `PAY TO: ${base}\nAMOUNT: ${amt} THB\nTABLE: ${PAY_BILL.table}`;
+  const url  = `https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=${encodeURIComponent(text)}`;
+  qrImg.src = url;
+  qrNote.textContent = `ยอดชำระ ฿${fmt(amt)}  |  ${base}`;
+  qrZone.removeAttribute("hidden");
 }
 
-/* confirm pay */
-$('#btnConfirmPay')?.addEventListener('click', (ev)=>{
+// ยืนยันปิดบิล → บันทึกเป็น sales
+$("#btnConfirmPay")?.addEventListener("click", (ev)=>{
   ev.preventDefault();
-  if(!PAY_BILL) return;
 
-  const method = $('#payMethod').value;
-  const received = Number($('#payReceived').value||0);
-  const total = PAY_BILL.total;
+  const r = Number($("#payReceived").value || 0);
+  const m = $("#payMethod").value;
+  const b = PAY_BILL;
+  if(!b){ alert('ไม่พบบิล'); return; }
 
-  if(method==='cash' && received < total){
-    return alert('จำนวนเงินไม่พอ (เงินสด)');
+  if(m==='cash' && r < b.total){
+    alert('เงินไม่พอสำหรับชำระ');
+    return;
   }
 
-  const change = Math.max(0, received-total);
+  // ลบบิลจาก open bills
+  const bills = getBills();
+  const idx = bills.findIndex(x=>x.id===b.id);
+  if(idx>-1) bills.splice(idx,1);
+  setBills(bills);
 
-  // create sale payload
-  const sale = {
+  // เพิ่มเป็นยอดขาย
+  const sales = getSales();
+  sales.push({
     id: 'S'+Date.now(),
-    table: PAY_BILL.table,
-    staff: PAY_BILL.staff,
-    items: PAY_BILL.items,
-    total,
-    createdAt: new Date().toISOString(),
-    payment: { method, received, change, qrText: method==='scan' ? (localStorage.getItem(K.QR_TEXT)||'') : '' }
-  };
-  const sales = JSON.parse(localStorage.getItem(K.SALES)||'[]'); sales.push(sale);
-  localStorage.setItem(K.SALES, JSON.stringify(sales));
-  if(typeof enqueueSale==='function') enqueueSale(sale); // ให้ sync.js ยิงขึ้น Sheets
-
-  let bills = getBills(); bills = bills.filter(x=>x.id!==PAY_BILL.id); setBills(bills);
-  PAY_BILL=null;
-  $('#payModal').close();
-  alert('ปิดบิลสำเร็จ');
-  renderOpenBills();
-});
-
-/* ---------- Settings: menu add / list ---------- */
-function renderMenuTable(){
-  const box = $('#menuTableBox');
-  const menu = getMenu();
-  if(!menu.length){ box.textContent='ยังไม่มีเมนู — เพิ่มด้านบนได้เลย'; return; }
-  const CAT = {SET:'ชุดหมูกระทะ',AD:'Add-on',DW:'เครื่องดื่ม',PR:'โปรเครื่องดื่ม'};
-  const rows = menu.map(m=>`
-    <tr>
-      <td>${m.id}</td>
-      <td>${m.name}</td>
-      <td>${CAT[m.cat]||m.cat}</td>
-      <td style="text-align:right">฿${fmt(m.price)}</td>
-      <td style="text-align:right"><button data-del="${m.id}" class="btn ghost">ลบ</button></td>
-    </tr>`).join('');
-  box.innerHTML = `
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr><th>รหัส</th><th>ชื่อ</th><th>หมวด</th><th style="text-align:right">ราคา</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-  box.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const id=btn.dataset.del;
-      const menu = getMenu().filter(x=>x.id!==id);
-      setMenu(menu); renderMenuTable(); renderMenu();
-    });
+    table: b.table, staff: b.staff,
+    items: b.items, total: b.total,
+    pay_method: m, received: r, change: Math.max(0,r-b.total),
+    createdAt: Date.now()
   });
-}
-$('#btnAddMenu')?.addEventListener('click', ()=>{
-  const name=$('#newName').value.trim();
-  const price=Number($('#newPrice').value||0);
-  const cat=$('#newCat').value;
-  const code=($('#newCode').value.trim()||'X'+Math.random().toString(36).slice(2,6)).toUpperCase();
-  if(!name||price<=0) return alert('กรอกชื่อ/ราคาให้ถูกต้อง');
-  const menu = getMenu(); menu.push({id:code,name,cat,price}); setMenu(menu);
-  $('#newName').value=''; $('#newPrice').value=''; $('#newCode').value='';
-  renderMenuTable(); renderMenu();
+  setSales(sales);
+
+  $("#payModal")?.close();
+  alert('ปิดบิลเรียบร้อย');
 });
 
-/* ---------- Settings: QR text ---------- */
-$('#btnSaveQR')?.addEventListener('click', ()=>{
-  const t = ($('#qrText').value||'').trim();
-  localStorage.setItem(K.QR_TEXT, t);
-  alert('บันทึกข้อความ QR แล้ว');
-});
-window.addEventListener('load', ()=>{
-  $('#qrText') && ($('#qrText').value = localStorage.getItem(K.QR_TEXT)||'');
-});
+/* ---------- Reports (ง่าย) ---------- */
+$("#btnToday")?.addEventListener("click", ()=>{
+  const s = getSales();
+  const v = getVoids();
+  const start = new Date(); start.setHours(0,0,0,0);
+  const sold  = s.filter(x=>x.createdAt>=start.getTime());
+  const voids = v.filter(x=>x.canceledAt>=start.getTime());
+  const sum   = sold.reduce((a,c)=>a+c.total,0);
+  const vSum  = voids.reduce((a,c)=>a+c.total,0);
 
-/* ---------- Reports ---------- */
-$('#btnToday')?.addEventListener('click', ()=>{
-  const sales = JSON.parse(localStorage.getItem(K.SALES)||'[]')
-    .filter(s=> new Date(s.createdAt).toDateString() === new Date().toDateString());
-  const sum   = sales.reduce((a,b)=>a+b.total,0);
-  $('#reportBox').textContent=`วันนี้ ${sales.length} บิล | รวม ฿${fmt(sum)}`;
+  $("#reportBox").innerHTML = `
+    <div>ยอดขายวันนี้: <b>฿${fmt(sum)}</b> (${sold.length} บิล)</div>
+    <div>ยกเลิกบิลวันนี้: <b>฿${fmt(vSum)}</b> (${voids.length} บิล)</div>
+  `;
 });
-$('#btnMonth')?.addEventListener('click', ()=>{
-  const now=new Date(); const m=now.getMonth(), y=now.getFullYear();
-  const sales = JSON.parse(localStorage.getItem(K.SALES)||'[]')
-    .filter(s=>{const d=new Date(s.createdAt);return d.getMonth()===m && d.getFullYear()===y});
-  const sum   = sales.reduce((a,b)=>a+b.total,0);
-  $('#reportBox').textContent=`เดือนนี้ ${sales.length} บิล | รวม ฿${fmt(sum)}`;
+$("#btnMonth")?.addEventListener("click", ()=>{
+  const s = getSales();
+  const v = getVoids();
+  const d = new Date();
+  const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+
+  const sold  = s.filter(x=>x.createdAt>=start);
+  const voids = v.filter(x=>x.canceledAt>=start);
+
+  const sum   = sold.reduce((a,c)=>a+c.total,0);
+  const vSum  = voids.reduce((a,c)=>a+c.total,0);
+
+  $("#reportBox").innerHTML = `
+    <div>ยอดขายเดือนนี้: <b>฿${fmt(sum)}</b> (${sold.length} บิล)</div>
+    <div>ยกเลิกบิลเดือนนี้: <b>฿${fmt(vSum)}</b> (${voids.length} บิล)</div>
+  `;
+});
+$("#btnPullNow")?.addEventListener("click", ()=>{
+  alert('เดโม: ยังไม่ได้ต่อ Google Sheets ในไฟล์นี้');
 });
 
 /* ---------- Boot ---------- */
-window.addEventListener('load', ()=>{
-  renderMenu(); renderCart(); renderOpenBills(); renderMenuTable();
-});
+ensureMenu();
+renderMenu();
+renderCart();
+renderOpenBills();
