@@ -12,7 +12,6 @@
       --bg:#0c0c0c;
       --panel:#ffffff;
       --raised:#fafafa;
-      --danger:#b00020;
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:#111;font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto}
@@ -34,7 +33,6 @@
     .btn{padding:9px 12px;border-radius:12px;border:1.4px solid var(--black);background:#fff;cursor:pointer}
     .btn.primary{background:#111;color:#fff;border-color:#111}
     .btn.ghost{background:transparent}
-    .btn.danger{border-color:var(--danger);color:#fff;background:var(--danger)}
     .row{display:flex;gap:12px;align-items:center}
     .right{display:flex;justify-content:flex-end}
     .space{height:10px}
@@ -56,7 +54,7 @@
     /* Table bills */
     .bill-row{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
     .bill-title{flex:1}
-    .bill-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .bill-actions{display:flex;gap:8px}
 
     /* Pay modal */
     dialog{border:none;border-radius:16px;padding:0;max-width:720px;width:95%}
