@@ -3,7 +3,7 @@
 
 const SYNC = {
   // ค่าเริ่มต้น (แก้เป็นลิงก์ของคุณได้เลย หรือให้ผู้ใช้วางผ่าน UI)
-  defaultUrl: "https://script.google.com/macros/s/AKfycbxYnp_ej9skdX1xwqonygTHVcpGS-yP2kFGMjvQmIaPcdARPAWG0w0B8KQw12aLea1j/exec",
+  defaultUrl: "https://script.google.com/macros/s/AKfycbxydXEkJ24gTGfHUNzD7M4YZSPzIkY23tc1xh0WMJO2H32DTxS_UsmzTlwE-grZjhJv/exec",
   urlKey: "POS_WEBAPP_URL",
   modeKey: "POS_SYNC_MODE",         // 'auto' | 'manual'
   queueKey: "POS_SYNC_QUEUE",       // คิวบิลค้างส่ง
