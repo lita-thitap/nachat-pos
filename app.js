@@ -172,7 +172,7 @@ function openPayModal(billId){
 $('#payMethod')?.addEventListener('change', (e)=>{
   const m = e.target.value;
   if(m==='scan'){
-    const acct = 'KBANK • กรพพร ทรัพย์คงเดช\nพร้อมเพย์: 0813238287';
+    const acct = 'KBANK • กชพร ทรัพย์คงเดช, พร้อมเพย์: 0813238287';
     const amt  = PAY_BILL?.total || 0;
     // ใส่ URL QR ของร้าน (ฝากไฟล์รูป QR ไว้ใน repo หรือใช้ลิงก์รูปถาวร)
     const QR_URL = 'qrcode.png'; // <-- ใส่ไฟล์ qr.png ไว้ใน repo เดียวกัน
