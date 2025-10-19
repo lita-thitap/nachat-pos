@@ -1,18 +1,18 @@
-/* ========== Nachat POS (Frontend) ========== */
+/* ========== Nachat POS (Frontend) — cash/scan + QR ========== */
 /* STORAGE KEYS */
 const K = {
   MENU: 'pos_menu',
   CART: 'pos_cart',
   BILLS: 'pos_bills',
   SALES: 'pos_sales',
-  EMP: 'pos_emp'
+  QR_TEXT: 'pos_qr_text'
 };
 
 /* Helpers */
 const $ = sel => document.querySelector(sel);
 const fmt = n => Number(n||0).toLocaleString('th-TH');
 
-/* Menu seed (ครั้งแรก) */
+/* Menu seed */
 function seedMenu(){
   if(localStorage.getItem(K.MENU)) return;
   const menu = [
@@ -155,58 +155,88 @@ function renderOpenBills(){
   }
 }
 
-/* Payment modal */
+/* Payment modal with items + QR */
 let PAY_BILL=null;
 function openPayModal(billId){
   const b = getBills().find(x=>x.id===billId); if(!b) return;
   PAY_BILL = b;
+
+  // Fill basic
   $('#payTable').value = b.table;
   $('#payStaff').value = b.staff;
   $('#payTotal').value = `฿${fmt(b.total)}`;
   $('#payReceived').value = b.total;
   $('#payChange').value = '฿0';
   $('#payMethod').value = 'cash';
-  $('#slipBox').hidden = true;
-  $('#paySlip').value = '';
-  $('#slipPreview').src = '';
+
+  // Items list
+  const tb = $('#payItems');
+  const rows = b.items.map(i=>`<tr><td>${i.name}</td><td style="width:70px;text-align:right">× ${i.qty}</td><td style="width:110px;text-align:right">฿${fmt(i.qty*i.price)}</td></tr>`).join('');
+  tb.innerHTML = `
+    <thead><tr><th>รายการ</th><th style="text-align:right">จำนวน</th><th style="text-align:right">ยอด</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="2" style="text-align:right">รวม</td><td style="text-align:right">฿${fmt(b.total)}</td></tr></tfoot>
+  `;
+
+  // Hide QR by default
+  $('#qrZone').hidden = true;
+  $('#qrImg').src=''; $('#qrNote').textContent='';
+
   $('#payModal').showModal();
 }
 
-$('#payMethod')?.addEventListener('change', (e)=>{
-  const m = e.target.value;
-  $('#slipBox').hidden = (m!=='scan');
-});
+// change received => change field
 $('#payReceived')?.addEventListener('input', ()=>{
   const t = PAY_BILL?.total||0;
   const r = Number($('#payReceived').value||0);
   $('#payChange').value = `฿${fmt(Math.max(0,r-t))}`;
 });
-$('#paySlip')?.addEventListener('change', async (e)=>{
-  const f = e.target.files?.[0]; if(!f){ $('#slipPreview').src=''; return; }
-  const reader = new FileReader();
-  reader.onload = ()=> $('#slipPreview').src = reader.result;
-  reader.readAsDataURL(f);
+
+// change method => toggle QR
+$('#payMethod')?.addEventListener('change', ()=>{
+  const m = $('#payMethod').value;
+  if(m==='scan'){
+    showQR();
+  }else{
+    $('#qrZone').hidden = true;
+    $('#qrImg').src=''; $('#qrNote').textContent='';
+  }
 });
 
+function showQR(){
+  const textBase = (localStorage.getItem(K.QR_TEXT)||'').trim();
+  if(!textBase){
+    alert('ยังไม่ได้ตั้งค่าข้อความ/เลขพร้อมเพย์สำหรับ QR (ไปที่ ตั้งค่าร้าน > ตั้งค่าการชำระเงิน)');
+    $('#payMethod').value='cash';
+    $('#qrZone').hidden = true;
+    return;
+  }
+  const amt = PAY_BILL?.total || 0;
+  // สร้างข้อความที่ใส่ใน QR
+  const payload = `PAY TO: ${textBase}\nAMOUNT: ${amt} THB\nTABLE: ${PAY_BILL.table}`;
+  // ใช้ Google Chart API ทำ QR
+  const url = `https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=${encodeURIComponent(payload)}`;
+  $('#qrImg').src = url;
+  $('#qrNote').textContent = `ยอดชำระ ฿${fmt(amt)}  |  ${textBase}`;
+  $('#qrZone').hidden = false;
+}
+
+/* confirm pay */
 $('#btnConfirmPay')?.addEventListener('click', (ev)=>{
-  ev.preventDefault(); // dialog auto-close? เราคุมเอง
+  ev.preventDefault();
   if(!PAY_BILL) return;
 
   const method = $('#payMethod').value;
   const received = Number($('#payReceived').value||0);
   const total = PAY_BILL.total;
-  if(received < total && method==='cash'){
+
+  if(method==='cash' && received < total){
     return alert('จำนวนเงินไม่พอ (เงินสด)');
   }
 
   const change = Math.max(0, received-total);
-  let slipData = '';
-  if(method==='scan'){
-    slipData = $('#slipPreview').src || '';
-    if(!slipData) return alert('กรุณาแนบสลิปถ้าเลือกโอน/สแกน');
-  }
 
-  // สร้าง sale
+  // create sale payload
   const sale = {
     id: 'S'+Date.now(),
     table: PAY_BILL.table,
@@ -214,14 +244,12 @@ $('#btnConfirmPay')?.addEventListener('click', (ev)=>{
     items: PAY_BILL.items,
     total,
     createdAt: new Date().toISOString(),
-    payment: { method, received, change, slipData }
+    payment: { method, received, change, qrText: method==='scan' ? (localStorage.getItem(K.QR_TEXT)||'') : '' }
   };
-  const sales = getSales(); sales.push(sale); setSales(sales);
+  const sales = JSON.parse(localStorage.getItem(K.SALES)||'[]'); sales.push(sale);
+  localStorage.setItem(K.SALES, JSON.stringify(sales));
+  if(typeof enqueueSale==='function') enqueueSale(sale); // ให้ sync.js ยิงขึ้น Sheets
 
-  // ส่งไปคิว Google Sheets (ถ้ามี sync.js)
-  if(typeof enqueueSale==='function') enqueueSale(sale);
-
-  // ลบออกจาก bills
   let bills = getBills(); bills = bills.filter(x=>x.id!==PAY_BILL.id); setBills(bills);
   PAY_BILL=null;
   $('#payModal').close();
@@ -256,7 +284,6 @@ function renderMenuTable(){
     });
   });
 }
-
 $('#btnAddMenu')?.addEventListener('click', ()=>{
   const name=$('#newName').value.trim();
   const price=Number($('#newPrice').value||0);
@@ -268,15 +295,27 @@ $('#btnAddMenu')?.addEventListener('click', ()=>{
   renderMenuTable(); renderMenu();
 });
 
-/* ---------- Reports (simple) ---------- */
+/* ---------- Settings: QR text ---------- */
+$('#btnSaveQR')?.addEventListener('click', ()=>{
+  const t = ($('#qrText').value||'').trim();
+  localStorage.setItem(K.QR_TEXT, t);
+  alert('บันทึกข้อความ QR แล้ว');
+});
+window.addEventListener('load', ()=>{
+  $('#qrText') && ($('#qrText').value = localStorage.getItem(K.QR_TEXT)||'');
+});
+
+/* ---------- Reports ---------- */
 $('#btnToday')?.addEventListener('click', ()=>{
-  const sales = getSales().filter(s=> new Date(s.createdAt).toDateString() === new Date().toDateString());
+  const sales = JSON.parse(localStorage.getItem(K.SALES)||'[]')
+    .filter(s=> new Date(s.createdAt).toDateString() === new Date().toDateString());
   const sum   = sales.reduce((a,b)=>a+b.total,0);
   $('#reportBox').textContent=`วันนี้ ${sales.length} บิล | รวม ฿${fmt(sum)}`;
 });
 $('#btnMonth')?.addEventListener('click', ()=>{
   const now=new Date(); const m=now.getMonth(), y=now.getFullYear();
-  const sales = getSales().filter(s=>{const d=new Date(s.createdAt);return d.getMonth()===m && d.getFullYear()===y});
+  const sales = JSON.parse(localStorage.getItem(K.SALES)||'[]')
+    .filter(s=>{const d=new Date(s.createdAt);return d.getMonth()===m && d.getFullYear()===y});
   const sum   = sales.reduce((a,b)=>a+b.total,0);
   $('#reportBox').textContent=`เดือนนี้ ${sales.length} บิล | รวม ฿${fmt(sum)}`;
 });
