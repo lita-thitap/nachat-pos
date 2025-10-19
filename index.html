@@ -3,123 +3,124 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Nachat POS</title>
+  <title>Nachat – POS</title>
   <style>
     :root{
-      --bg:#111; --panel:#fff; --raised:#fafafa; --line:#e9e9e9;
-      --black:#111; --muted:#707070;
+      --black:#111;
+      --muted:#6b6b6b;
+      --line:#e8e8e8;
+      --bg:#0c0c0c;
+      --panel:#ffffff;
+      --raised:#fafafa;
+      --danger:#b00020;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--black);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
+    html,body{margin:0;padding:0;background:var(--bg);color:#111;font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
 
     /* Header */
-    header{background:linear-gradient(#1c1c1c,#1a1a1a);color:#fff;border-bottom:1px solid #000}
-    .wrap{max-width:1200px;margin:0 auto;padding:16px}
-    .head-row{display:flex;align-items:center;gap:12px;justify-content:center}
-    .header-logo{height:56px;width:56px;object-fit:contain;border-radius:8px}
-    h1{margin:0;font-size:24px;font-weight:800}
-    .sub{margin-top:6px;text-align:center;color:#d5d5d5}
+    header{background:linear-gradient(#242424,#171717);color:#fff;border-bottom:1px solid #000}
+    .header-inner{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 0}
+    .title{display:flex;align-items:center;gap:12px}
+    .title img{height:60px;width:auto}
+    .title h1{margin:0;font-size:26px;font-weight:800}
+    .sub{opacity:.9}
 
-    /* Tabs */
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;max-width:1200px;margin:16px auto 0;padding:0 16px}
-    .tab{padding:10px 14px;border:1.5px solid var(--black);border-radius:12px;background:#fff;cursor:pointer}
-    .tab.active{outline:2px solid var(--black);background:var(--raised)}
-    .content{max-width:1200px;margin:12px auto;padding:0 16px 32px}
+    /* Tabs + buttons */
+    .tabs{display:flex;gap:10px;flex-wrap:wrap;padding:14px 0}
+    .tab{padding:10px 14px;border-radius:12px;border:1.4px solid var(--black);background:#fff;cursor:pointer}
+    .tab.active{background:var(--raised);outline:2px solid #000}
 
-    /* Cards / grid */
-    .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-    .row{display:flex;gap:10px;align-items:center}
-    .row > *{flex:1}
-    .right{display:flex;justify-content:flex-end}
-
-    /* Controls */
-    .btn{padding:9px 12px;border-radius:12px;border:1.5px solid var(--black);background:#fff;color:#111;cursor:pointer}
-    .btn.primary{background:#111;color:#fff}
+    .btn{padding:9px 12px;border-radius:12px;border:1.4px solid var(--black);background:#fff;cursor:pointer}
+    .btn.primary{background:#111;color:#fff;border-color:#111}
     .btn.ghost{background:transparent}
-    input,select,textarea{background:#fff;border:1.5px solid var(--black);color:#111;
-      padding:9px 10px;border-radius:12px;width:100%}
+    .btn.danger{border-color:var(--danger);color:#fff;background:var(--danger)}
+    .row{display:flex;gap:12px;align-items:center}
+    .right{display:flex;justify-content:flex-end}
+    .space{height:10px}
+
+    input,select{background:#fff;border:1.4px solid var(--black);color:#111;padding:9px 10px;border-radius:12px;width:100%}
+    label.muted{color:var(--muted);font-size:12px}
+
+    /* Cards/Grids */
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
+    .card h3{margin:0 0 8px;font-size:15px}
     .pill{padding:6px 10px;border-radius:999px;border:1.5px solid var(--black);background:#fff;color:#111}
-    .muted{color:var(--muted)}
 
-    /* POS buttons */
-    .menu-column .item{background:#111;color:#fff;border-radius:14px;padding:10px 12px;
-      border:1px solid #000;cursor:pointer}
-    .menu-column .item .price{display:inline-block;margin-left:10px;padding:2px 8px;border-radius:999px;background:#fff;color:#111;border:1px solid #111}
+    /* Menu button */
+    .menu-btn{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;border:1.4px solid var(--black);background:#fff;cursor:pointer}
+    .menu-btn .name{font-weight:600}
+    .menu-btn .price{border:1px solid var(--black);border-radius:999px;padding:2px 8px}
 
-    /* Open bills */
-    .bill-row{display:grid;grid-template-columns:1fr 220px 220px 180px;gap:10px;align-items:center}
+    /* Table bills */
+    .bill-row{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+    .bill-title{flex:1}
+    .bill-actions{display:flex;gap:8px;flex-wrap:wrap}
 
-    /* Subtabs */
-    .subtabs{display:flex;gap:8px;margin-bottom:12px}
-    .subtab{padding:8px 10px;border:1.5px solid var(--black);border-radius:10px;background:#fff;cursor:pointer}
-    .subtab.active{outline:2px solid var(--black);background:var(--raised)}
-
-    /* Modal */
-    dialog{border:none;border-radius:16px;max-width:720px;width:96%}
-    dialog::backdrop{background:rgba(0,0,0,.35)}
-    .qr-panel{display:flex;gap:12px;align-items:center}
-    .qr-panel .hint{font-size:12px;color:#555}
-    .items-box{max-height:220px;overflow:auto;border:1px solid #eee;border-radius:10px;padding:8px}
-    .items-box table{width:100%;border-collapse:collapse}
-    .items-box th,.items-box td{border-bottom:1px dashed #eee;padding:6px 4px;text-align:left}
-    .items-box tfoot td{font-weight:700}
+    /* Pay modal */
+    dialog{border:none;border-radius:16px;padding:0;max-width:720px;width:95%}
+    dialog::backdrop{background:rgba(0,0,0,.45)}
+    dialog .card{border:none}
+    .items-box{max-height:240px;overflow:auto;border:1px dashed var(--line);border-radius:12px;background:#fcfcfc;padding:8px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px dashed var(--line);padding:8px;text-align:left}
+    tfoot td{font-weight:700}
+    .qr-panel{display:flex;gap:14px;align-items:center;margin-top:8px;padding:10px;border:1px dashed var(--line);border-radius:12px;background:#f8f8f8}
+    .hint{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
-
-  <!-- Header -->
   <header>
-    <div class="wrap">
-      <div class="head-row">
-        <img src="LOGO NACHAT.png" alt="Nachat Logo" class="header-logo" />
+    <div class="wrap header-inner">
+      <div class="title">
+        <img src="LOGO NACHAT.png" alt="Nachat Logo" />
         <h1>ณฉัตร | Nachat – POS</h1>
       </div>
       <div class="sub">หมูกระทะชุดละ 299 + Add-on & เครื่องดื่ม | สรุปยอดขายรายวัน / สัปดาห์ / เดือน</div>
     </div>
   </header>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab active" data-tab="#pos">รับออเดอร์</button>
-    <button class="tab" data-tab="#open">โต๊ะ/บิล</button>
-    <button class="tab" data-tab="#reports">รายงานขาย</button>
-    <button class="tab" data-tab="#settings">ตั้งค่าร้าน</button>
-  </div>
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab active" data-tab="#pos">รับออเดอร์</button>
+      <button class="tab" data-tab="#open">โต๊ะ/บิล</button>
+      <button class="tab" data-tab="#reports">รายงานขาย</button>
+      <button class="tab" data-tab="#settings">ตั้งค่าร้าน</button>
+    </div>
 
-  <div class="content">
     <!-- POS -->
     <section id="pos" class="tabpane">
       <div class="card">
         <div class="row">
           <div><label class="muted">โต๊ะ</label><input id="inpTable" placeholder="เช่น N1" /></div>
           <div><label class="muted">พนักงาน</label><input id="inpStaff" placeholder="เช่น Koch" /></div>
-          <div style="max-width:160px;align-self:end"><button id="btnOpenBill" class="btn primary">เปิดบิล</button></div>
+          <div style="max-width:160px;align-self:end"><button class="btn primary" id="btnOpenBill">เปิดบิล</button></div>
         </div>
       </div>
 
-      <div style="height:8px"></div>
-      <div id="menuPanels" class="grid"><!-- render --></div>
+      <div class="space"></div>
+      <div id="menuPanels" class="grid"><!-- render เมนู --></div>
 
-      <div style="height:8px"></div>
+      <div class="space"></div>
       <div class="card">
         <h3>ตะกร้า</h3>
-        <div id="cartList" class="muted">ยังไม่มีรายการ</div>
-        <div class="row" style="margin-top:8px">
+        <div id="cartList" class="hint">ยังไม่มีรายการ</div>
+        <div class="row" style="margin-top:6px">
           <div class="pill">รวม: <b id="cartTotal">0</b> บาท</div>
           <div class="right" style="flex:1;gap:8px">
-            <button id="btnClearCart" class="btn ghost">ล้างตะกร้า</button>
-            <button id="btnAddToBill" class="btn primary">เพิ่มลงบิลปัจจุบัน</button>
+            <button class="btn" id="btnClearCart">ล้างตะกร้า</button>
+            <button class="btn primary" id="btnAddToBill">เพิ่มลงบิลปัจจุบัน</button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- OPEN -->
+    <!-- OPEN BILLS -->
     <section id="open" class="tabpane" hidden>
       <div class="card">
         <h3>บิลที่เปิดอยู่</h3>
-        <div id="openBills" style="display:grid;gap:10px"></div>
+        <div id="openBills"></div>
       </div>
     </section>
 
@@ -127,69 +128,21 @@
     <section id="reports" class="tabpane" hidden>
       <div class="card">
         <h3>สรุปรายงาน</h3>
-        <div class="row">
+        <div class="row" style="gap:8px">
           <button class="btn" id="btnToday">วันนี้</button>
           <button class="btn" id="btnMonth">เดือนนี้</button>
+          <button class="btn" id="btnPullNow">ดึงจากคลาวด์ทันที</button>
         </div>
-        <div style="height:8px"></div>
-        <div id="reportBox" class="muted">ยังไม่มีข้อมูล</div>
+        <div class="space"></div>
+        <div id="reportBox" class="hint">ยังไม่มีข้อมูล</div>
       </div>
     </section>
 
     <!-- SETTINGS -->
     <section id="settings" class="tabpane" hidden>
-      <div class="subtabs">
-        <button class="subtab active" data-sub="#menuSet">ตั้งค่าเมนู</button>
-        <button class="subtab" data-sub="#cloudSet">เชื่อมต่อ Google Sheets</button>
-        <button class="subtab" data-sub="#paySet">ตั้งค่าการชำระเงิน (QR)</button>
-      </div>
-
-      <div id="menuSet" class="subpane">
-        <div class="card">
-          <h3>ตั้งค่าเมนู (จัดตามหมวด)</h3>
-          <div class="row" style="gap:8px;margin-bottom:8px">
-            <input id="newName" placeholder="ชื่อเมนูใหม่เร็วๆ" />
-            <input id="newPrice" type="number" placeholder="ราคา" style="max-width:140px" />
-            <select id="newCat" style="max-width:220px">
-              <option value="SET">ชุดหมูกระทะ</option>
-              <option value="AD">Add-on</option>
-              <option value="DW">เครื่องดื่ม</option>
-              <option value="PR">โปรเครื่องดื่ม</option>
-            </select>
-            <input id="newCode" placeholder="รหัส (เช่น Z99)" style="max-width:140px" />
-            <button id="btnAddMenu" class="btn primary">เพิ่ม</button>
-          </div>
-          <div id="menuTableBox" class="muted">ยังไม่มีเมนู — เพิ่มด้านบนได้เลย</div>
-        </div>
-      </div>
-
-      <div id="cloudSet" class="subpane" hidden>
-        <div class="card">
-          <h3>เชื่อมยอดขายไปยัง Google Sheets (Apps Script)</h3>
-          <div class="row">
-            <input id="inpWebAppUrl" placeholder="https://script.google.com/macros/s/…/exec" />
-            <button class="btn" id="btnSaveUrl">บันทึก</button>
-            <button class="btn" id="btnTest">ทดสอบเชื่อมต่อ</button>
-          </div>
-          <div id="gsStatus" class="muted" style="margin-top:6px"></div>
-          <div style="height:8px"></div>
-          <div class="row">
-            <button class="btn ghost" id="btnClearLocal">ล้างข้อมูลในเครื่องนี้</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="paySet" class="subpane" hidden>
-        <div class="card">
-          <h3>ตั้งค่าข้อความ/เลขพร้อมเพย์สำหรับ QR</h3>
-          <div class="row">
-            <textarea id="qrText" rows="3" placeholder="เช่น PromptPay 08xxxxxxxx หรือ ชื่อบัญชี/ธ. ปลายทาง…"></textarea>
-          </div>
-          <div class="row">
-            <button id="btnSaveQR" class="btn primary">บันทึกข้อความ QR</button>
-          </div>
-          <div class="muted">ระบบจะสร้าง QR จากข้อความนี้ + จำนวนเงินอัตโนมัติ (ใช้ Google Chart)</div>
-        </div>
+      <div class="card">
+        <h3>ตั้งค่าเมนู (ตัวอย่าง)</h3>
+        <div class="hint">ตัวอย่างเมนูถูกฝังในโค้ดที่ <code>DEFAULT_MENU</code> (ไฟล์ app.js) คุณสามารถเชื่อมหน้า “ตั้งค่าเมนู” ที่ทำไว้เดิมต่อได้</div>
       </div>
     </section>
   </div>
@@ -199,25 +152,20 @@
     <form method="dialog" class="card" style="border:none">
       <h3>ปิดบิล</h3>
 
-      <!-- บรรทัดบน -->
       <div class="row">
         <div><label class="muted">โต๊ะ</label><input id="payTable" readonly /></div>
         <div><label class="muted">พนักงาน</label><input id="payStaff" readonly /></div>
         <div><label class="muted">ยอดรวม</label><input id="payTotal" readonly /></div>
       </div>
 
-      <!-- รายการ -->
       <div style="height:8px"></div>
       <div class="items-box">
-        <table id="payItems">
-          <!-- tbody/ tfoot will be injected -->
-        </table>
+        <table id="payItems"></table>
       </div>
 
-      <!-- วิธีจ่าย -->
       <div style="height:8px"></div>
       <div class="row">
-        <div style="max-width:200px">
+        <div style="max-width:220px">
           <label class="muted">วิธีชำระ</label>
           <select id="payMethod">
             <option value="cash">เงินสด (Cash)</option>
@@ -234,16 +182,15 @@
         </div>
       </div>
 
-      <!-- QR Zone -->
+      <!-- QR zone -->
       <div id="qrZone" class="qr-panel" hidden>
         <img id="qrImg" alt="QR" style="width:220px;height:220px;border:1px solid #eee;border-radius:12px;background:#fff" />
         <div>
           <div class="hint">สแกนจ่ายได้เลย</div>
-          <div id="qrNote" class="muted" style="margin-top:6px"></div>
+          <div id="qrNote" class="hint" style="margin-top:6px"></div>
         </div>
       </div>
 
-      <!-- ปุ่ม -->
       <div class="right" style="gap:8px;margin-top:10px">
         <button class="btn" value="cancel">ยกเลิก</button>
         <button id="btnConfirmPay" class="btn primary" value="ok">ปิดบิล</button>
@@ -251,6 +198,7 @@
     </form>
   </dialog>
 
+  <script src="app.js"></script>
   <script>
     // Tabs
     document.querySelectorAll('.tab').forEach(btn=>{
@@ -261,18 +209,6 @@
         document.querySelector(btn.dataset.tab).hidden=false;
       });
     });
-    // Subtabs
-    document.querySelectorAll('.subtab').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        document.querySelectorAll('.subtab').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('.subpane').forEach(p=>p.hidden=true);
-        document.querySelector(btn.dataset.sub).hidden=false;
-      });
-    });
   </script>
-
-  <script src="app.js"></script>
-  <script src="sync.js"></script>
 </body>
 </html>
