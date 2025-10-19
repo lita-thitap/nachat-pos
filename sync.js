@@ -1,158 +1,142 @@
 /* ========== Nachat POS – Google Sheets Sync (frontend) ========== */
-/* ปรับให้เป็น simple request (text/plain) เพื่อตัดปัญหา CORS/preflight */
+/* ยิงแบบ text/plain เพื่อเลี่ยง preflight/CORS */
 
 const SYNC = {
-  // ค่าเริ่มต้น (แก้เป็นลิงก์ของคุณได้เลย หรือให้ผู้ใช้วางผ่าน UI)
   defaultUrl: "https://script.google.com/macros/s/AKfycbxydXEkJ24gTGfHUNzD7M4YZSPzIkY23tc1xh0WMJO2H32DTxS_UsmzTlwE-grZjhJv/exec",
-  urlKey: "POS_WEBAPP_URL",
-  modeKey: "POS_SYNC_MODE",         // 'auto' | 'manual'
-  queueKey: "POS_SYNC_QUEUE",       // คิวบิลค้างส่ง
-  metaKey: "POS_SYNC_META"          // เก็บ lastTry/lastOk/error
+  urlKey:   "POS_WEBAPP_URL",
+  modeKey:  "POS_SYNC_MODE",     // 'auto' | 'manual'
+  queueKey: "POS_SYNC_QUEUE",    // เก็บคิวบิลค้างส่ง
+  metaKey:  "POS_SYNC_META"      // เก็บ lastTry / lastOk / error ล่าสุด
 };
 
-/* -------------- Storage helpers -------------- */
+/* ---------- helpers ---------- */
 const $ = (s) => document.querySelector(s);
 
-function getUrl() {
-  return (localStorage.getItem(SYNC.urlKey) || SYNC.defaultUrl).trim();
-}
-function setUrl(u) {
-  localStorage.setItem(SYNC.urlKey, (u || '').trim());
-}
-function getMode() {
-  return localStorage.getItem(SYNC.modeKey) || 'auto';
-}
-function setMode(m) {
-  localStorage.setItem(SYNC.modeKey, m);
-}
-function getQueue() {
-  try { return JSON.parse(localStorage.getItem(SYNC.queueKey) || '[]'); } catch { return []; }
-}
-function setQueue(arr) {
-  localStorage.setItem(SYNC.queueKey, JSON.stringify(arr || []));
-}
-function getMeta() {
-  try { return JSON.parse(localStorage.getItem(SYNC.metaKey) || '{}'); } catch { return {}; }
-}
-function setMeta(m) {
-  localStorage.setItem(SYNC.metaKey, JSON.stringify(m || {}));
-}
+function getUrl(){ return (localStorage.getItem(SYNC.urlKey) || SYNC.defaultUrl).trim(); }
+function setUrl(u){ localStorage.setItem(SYNC.urlKey, (u||'').trim()); }
 
-/* -------------- POST helper (text/plain) -------------- */
-async function postJSON(url, data) {
-  const res = await fetch(url, {
+function getMode(){ return localStorage.getItem(SYNC.modeKey) || 'auto'; }
+function setMode(m){ localStorage.setItem(SYNC.modeKey, m); }
+
+function getQueue(){ try{ return JSON.parse(localStorage.getItem(SYNC.queueKey)||'[]'); }catch{ return []; } }
+function setQueue(a){ localStorage.setItem(SYNC.queueKey, JSON.stringify(a||[])); }
+
+function getMeta(){ try{ return JSON.parse(localStorage.getItem(SYNC.metaKey)||'{}'); }catch{ return {}; } }
+function setMeta(m){ localStorage.setItem(SYNC.metaKey, JSON.stringify(m||{})); }
+
+/* ---------- POST (text/plain) ---------- */
+async function postJSON(url, data){
+  const res  = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type':'text/plain;charset=utf-8' },
     body: JSON.stringify(data)
   });
-  const text = await res.text(); // Apps Script อาจส่ง JSON/ข้อความ
-  try { return JSON.parse(text); } catch { return { ok: true, raw: text }; }
+  const text = await res.text();     // Apps Script อาจส่ง JSON หรือแค่ข้อความ
+  try { return JSON.parse(text); }   // พยายาม parse ก่อน
+  catch { return { ok:true, raw:text }; }
 }
 
-/* -------------- Queue API -------------- */
-// เรียกจาก app.js ตอน "ปิดบิล" สำเร็จ
-// sale = { id, table, staff, items:[], total, createdAt, payment:{method, received, change} }
-function enqueueSale(sale) {
+/* ---------- queue APIs ---------- */
+// เรียกจาก app.js ตอน “ปิดบิล” สำเร็จ
+// sale = { id, table, staff, items:[], total, createdAt, payment:{method, received, change}, updatedAt? }
+function enqueueSale(sale){
   const q = getQueue();
   q.push(sale);
   setQueue(q);
-  updateStatus(`เข้าคิวบิล #${sale.id} แล้ว (${q.length} คิวค้าง)`);
-  if (getMode() === 'auto') trySync();  // auto: ยิงทันที
+  updateStatus(`เข้าคิวบิล #${sale.id} แล้ว (คิวค้าง ${q.length})`);
+  if(getMode()==='auto') trySync();
 }
 
-// ยิงไปทีละใบ (ป้องกันชน) – ถ้ามี error จะหยุดและค้างไว้ในคิวเดิม
 let syncRunning = false;
-async function trySync() {
-  if (syncRunning) return;
+async function trySync(){
+  if(syncRunning) return;
   const url = getUrl();
-  if (!url) { updateStatus('ยังไม่ตั้งค่า Web App URL'); return; }
+  if(!url){ updateStatus('ยังไม่ได้ตั้งค่า Web App URL'); return; }
 
   const q = getQueue();
-  if (!q.length) { updateStatus('ไม่มีคิวค้างส่ง'); return; }
+  if(!q.length){ updateStatus('ไม่มีคิวค้างส่ง'); return; }
 
   syncRunning = true;
-  try {
-    for (let i = 0; i < q.length; i++) {
-      const payload = q[0]; // ยิงตัวหน้าสุด
-      const meta = getMeta(); meta.lastTry = new Date().toISOString(); setMeta(meta);
+  try{
+    // ใช้ while เพื่อให้ทำงานกับการ shift() ได้ 100%
+    while(q.length){
+      const payload = q[0];
+      const meta    = getMeta(); meta.lastTry = new Date().toISOString(); setMeta(meta);
 
       let ok = false, resp = null;
-      try {
+      try{
         resp = await postJSON(url, payload);
-        ok = !!(resp && resp.ok !== false); // ถ้าไม่มี ok ให้ถือว่า ok
-      } catch (err) {
-        updateStatus(`ส่งไม่สำเร็จ: ${err}`);
-        break; // ออกจาก loop (ไว้ยิงใหม่ทีหลัง)
+        ok   = !(resp && resp.ok === false); // ถ้าไม่มี field ok ให้ถือว่าสำเร็จ
+      }catch(err){
+        updateStatus(`ส่งไม่สำเร็จ (เครือข่าย): ${err}`);
+        break; // หยุดไว้ก่อน รอผู้ใช้กดส่งใหม่
       }
 
-      if (!ok) {
-        updateStatus(`ส่งไม่สำเร็จ: ${(resp && resp.error) || 'unknown error'}`);
+      if(!ok){
+        updateStatus(`ส่งไม่สำเร็จจากเซิร์ฟเวอร์: ${(resp && resp.error)||'unknown'}`);
         break;
       }
 
-      // สำเร็จ -> ตัดออกจากคิว
+      // สำเร็จ -> ตัดใบหน้าสุดออก
       q.shift(); setQueue(q);
       const meta2 = getMeta(); meta2.lastOk = new Date().toISOString(); setMeta(meta2);
       updateStatus(`ส่งสำเร็จ #${payload.id} (คงเหลือ ${q.length})`);
 
-      // ปล่อยเวลาเล็กน้อยกัน rate (คิวเยอะๆ)
-      await new Promise(r => setTimeout(r, 150));
+      // กัน rate limit เบา ๆ
+      await new Promise(r=>setTimeout(r,150));
     }
-  } finally {
+  }finally{
     syncRunning = false;
   }
 }
 
-/* -------------- UI binding (รายงานขาย) -------------- */
-function updateStatus(msg) {
-  const s = $('#gsStatus');
-  if (!s) return;
+/* ---------- UI/report bindings ---------- */
+function updateStatus(msg){
+  const el = $('#gsStatus'); if(!el) return;
   const qlen = getQueue().length;
   const meta = getMeta();
-  s.innerHTML = [
+  el.innerHTML = [
     msg,
-    `<div class="muted">คิวค้าง: ${qlen} | lastTry: ${meta.lastTry || '-'} | lastOk: ${meta.lastOk || '-'}</div>`
+    `<div class="muted">คิวค้าง: ${qlen} | lastTry: ${meta.lastTry||'-'} | lastOk: ${meta.lastOk||'-'}</div>`
   ].join('<br/>');
 }
 
-function fillUi() {
-  $('#inpWebAppUrl') && ($('#inpWebAppUrl').value = getUrl());
-  $('#selSyncMode') && ($('#selSyncMode').value = getMode());
+function fillUi(){
+  if($('#inpWebAppUrl')) $('#inpWebAppUrl').value = getUrl();
+  if($('#selSyncMode'))  $('#selSyncMode').value  = getMode();
   updateStatus('พร้อมซิงก์');
 }
 
-$('#btnSaveUrl')?.addEventListener('click', () => {
+$('#btnSaveUrl')?.addEventListener('click', ()=>{
   const url = $('#inpWebAppUrl')?.value.trim();
-  if (!url) { alert('กรุณาวาง Web App URL'); return; }
+  if(!url){ alert('กรุณาวาง Web App URL'); return; }
   setUrl(url);
   setMode($('#selSyncMode')?.value || 'auto');
   updateStatus('บันทึกการตั้งค่าแล้ว');
 });
 
-$('#selSyncMode')?.addEventListener('change', (e) => {
+$('#selSyncMode')?.addEventListener('change', e=>{
   setMode(e.target.value || 'auto');
   updateStatus(`โหมดซิงก์: ${getMode()}`);
 });
 
-$('#btnTest')?.addEventListener('click', async () => {
-  const url = getUrl();
-  if (!url) { alert('ยังไม่ตั้งค่า URL'); return; }
-  try {
-    const ping = await fetch(url).then(r => r.text());
+$('#btnTest')?.addEventListener('click', async ()=>{
+  const url = getUrl(); if(!url){ alert('ยังไม่ตั้งค่า URL'); return; }
+  try{
+    const txt = await fetch(url).then(r=>r.text());
+    console.log('Ping:', txt);
     updateStatus('ทดสอบเชื่อมต่อ OK');
-    console.log('Ping:', ping);
     alert('ทดสอบเชื่อมต่อสำเร็จ ✅');
-  } catch (err) {
+  }catch(err){
     updateStatus('ทดสอบเชื่อมต่อไม่สำเร็จ');
-    alert('เชื่อมต่อไม่ได้ ❌\n' + err);
+    alert('เชื่อมต่อไม่ได้ ❌\n'+err);
   }
 });
 
-$('#btnPushPending')?.addEventListener('click', () => trySync());
+$('#btnPushPending')?.addEventListener('click', ()=>trySync());
 
-/* -------------- Auto fill เมื่อโหลดหน้า -------------- */
 window.addEventListener('load', fillUi);
 
-/* -------------- Export ให้ app.js เรียกใช้ -------------- */
+/* export ให้ app.js ใช้ */
 window.enqueueSale = enqueueSale;
-window.trySync = trySync;
+window.trySync     = trySync;
