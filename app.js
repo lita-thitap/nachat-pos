@@ -175,7 +175,7 @@ $('#payMethod')?.addEventListener('change', (e)=>{
     const acct = 'KBANK • กรพพร ทรัพย์คงเดช\nพร้อมเพย์: 0813238287';
     const amt  = PAY_BILL?.total || 0;
     // ใส่ URL QR ของร้าน (ฝากไฟล์รูป QR ไว้ใน repo หรือใช้ลิงก์รูปถาวร)
-    const QR_URL = 'qr.png'; // <-- ใส่ไฟล์ qr.png ไว้ใน repo เดียวกัน
+    const QR_URL = 'qrcode.png'; // <-- ใส่ไฟล์ qr.png ไว้ใน repo เดียวกัน
     $('#qrImg').src = QR_URL;
     $('#qrNote').textContent = acct + `\nยอดที่ต้องโอน ฿${fmt(amt)}`;
     $('#qrBox').hidden = false;
