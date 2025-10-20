@@ -179,10 +179,9 @@ $('#payReceived')?.addEventListener('input',()=>{
   $('#payChange').value=`฿${fmt(Math.max(0,r-t))}`;
 });
 
-/* ---------- พิมพ์บิลสไตล์ตัวอย่างรูปที่ 2 (58 มม.) ---------- */
+/* ---------- พิมพ์บิล (58 มม. ไม่มี orderNo) ---------- */
 function printReceipt(sale){
-  // ตั้งค่า VAT ถ้าไม่คิดภาษีให้ตั้ง 0
-  const VAT_RATE = 0.00; // 0.07 ถ้าจะคิด VAT 7%
+  const VAT_RATE = 0.00; // เปลี่ยนเป็น 0.07 ถ้ามี VAT
   const nf2 = new Intl.NumberFormat('th-TH',{minimumFractionDigits:2, maximumFractionDigits:2});
   const nf0 = new Intl.NumberFormat('th-TH');
 
@@ -190,9 +189,6 @@ function printReceipt(sale){
   const subTotal = items.reduce((s,i)=>s + (Number(i.qty||1)*Number(i.price||0)), 0);
   const vat      = +(subTotal*VAT_RATE).toFixed(2);
   const grand    = +(subTotal + vat).toFixed(2);
-
-  // เลขออเดอร์ใหญ่ ๆ ตรงกลาง (ดึงท้าย 4 หลัก ถ้าอยากรันนิ่งจริงค่อยทำตัวนับ)
-  const orderNo = String(sale.id||'').replace(/\D/g,'').slice(-4).padStart(4,'0');
 
   const rows = items.map(i => `
     <tr class="it">
@@ -212,7 +208,6 @@ function printReceipt(sale){
     .logo{ width:44px; height:44px; object-fit:contain; border-radius:8px; display:block; margin:0 auto 6px }
     .store{ font-weight:700; font-size:14px }
     .muted{ color:#444; font-size:11px }
-    .orderNo{ font-size:36px; font-weight:800; letter-spacing:1px; margin:8px 0 4px }
     table{ width:100%; border-collapse:collapse; margin-top:6px }
     th,td{ padding:6px 0 }
     thead th{ font-weight:700; border-bottom:1px solid #000 }
@@ -235,7 +230,6 @@ function printReceipt(sale){
       <div class="muted">Tel: 081-323-8287</div>
       <div class="muted">${new Date(sale.createdAt).toLocaleString('th-TH')}</div>
       <div class="muted">โต๊ะ ${sale.table||'-'}${sale.staff?` · ${sale.staff}`:''}</div>
-      <div class="orderNo">${orderNo}</div>
     </div>
 
     <table>
