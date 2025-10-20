@@ -328,5 +328,20 @@ function renderReports(){
 window.renderReports=renderReports;
 $('#selPreset')?.addEventListener('change',renderReports); $('#dFrom')?.addEventListener('change',renderReports); $('#dTo')?.addEventListener('change',renderReports);
 
+/* ====== ปุ่มล้างเฉพาะข้อมูลรายการขาย ====== */
+document.getElementById('btnResetSales')?.addEventListener('click', () => {
+  if (!confirm('ยืนยันล้างข้อมูล “รายการขาย” ทั้งหมดหรือไม่?\n(ข้อมูลในรายงานยอดขายจะถูกล้างออก แต่บิลและเมนูจะยังอยู่เหมือนเดิม)')) return;
+
+  localStorage.removeItem(K.SALES); // ล้างเฉพาะข้อมูลยอดขาย
+  alert('ล้างข้อมูล “รายการขาย” เรียบร้อยแล้ว ✅');
+
+  // รีเฟรชหน้าแสดงผล
+  try {
+    renderReports();
+  } catch (err) {
+    console.warn('ไม่สามารถรีเฟรชรายงานได้', err);
+  }
+});
+
 /* Boot */
 window.addEventListener('load',()=>{ renderMenu(); renderCart(); renderOpenBills(); renderMenuTable(); renderReports(); });
