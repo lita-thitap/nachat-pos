@@ -179,55 +179,87 @@ $('#payReceived')?.addEventListener('input',()=>{
   $('#payChange').value=`฿${fmt(Math.max(0,r-t))}`;
 });
 
-/* ---------- พิมพ์บิล (58 มม. พร้อมโลโก้/ชื่อร้าน/เบอร์) ---------- */
+/* ---------- พิมพ์บิลสไตล์ตัวอย่างรูปที่ 2 (58 มม.) ---------- */
 function printReceipt(sale){
-  const lines=(sale.items||[]).map(i=>`
-    <tr>
-      <td>${i.name}</td>
-      <td class="c">${i.qty}</td>
-      <td class="r">฿${fmt(i.price)}</td>
-      <td class="r">฿${fmt(i.qty*i.price)}</td>
-    </tr>`).join('');
+  // ตั้งค่า VAT ถ้าไม่คิดภาษีให้ตั้ง 0
+  const VAT_RATE = 0.00; // 0.07 ถ้าจะคิด VAT 7%
+  const nf2 = new Intl.NumberFormat('th-TH',{minimumFractionDigits:2, maximumFractionDigits:2});
+  const nf0 = new Intl.NumberFormat('th-TH');
 
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Receipt</title>
+  const items = (sale.items||[]);
+  const subTotal = items.reduce((s,i)=>s + (Number(i.qty||1)*Number(i.price||0)), 0);
+  const vat      = +(subTotal*VAT_RATE).toFixed(2);
+  const grand    = +(subTotal + vat).toFixed(2);
+
+  // เลขออเดอร์ใหญ่ ๆ ตรงกลาง (ดึงท้าย 4 หลัก ถ้าอยากรันนิ่งจริงค่อยทำตัวนับ)
+  const orderNo = String(sale.id||'').replace(/\D/g,'').slice(-4).padStart(4,'0');
+
+  const rows = items.map(i => `
+    <tr class="it">
+      <td class="qty">${nf0.format(i.qty||1)}</td>
+      <td class="name">${i.name||''}</td>
+      <td class="price">${nf2.format(i.price||0)} <span class="baht">฿</span></td>
+    </tr>
+  `).join('');
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Receipt</title>
   <style>
     @page { size: 58mm auto; margin: 0; }
-    body{ width:58mm; margin:0; font:12px/1.35 system-ui,-apple-system,Segoe UI,Roboto; color:#000; }
-    .wrap{ padding:6px 6px 10px; }
-    .hdr{ text-align:center; margin-bottom:6px; }
-    .logo{ width:42px; height:42px; object-fit:contain; border-radius:8px; display:block; margin:0 auto 4px; }
-    .store{ font-weight:700; font-size:13px; }
-    .muted{ color:#444; font-size:11px; }
-    table{ width:100%; border-collapse:collapse; margin-top:6px; }
-    th,td{ padding:4px 0; border-bottom:1px dashed #999; }
-    thead th{ border-bottom:1px solid #000; font-weight:700; }
-    .r{ text-align:right } .c{ text-align:center }
-    .foot td{ border-bottom:none; padding-top:4px; }
-    .thank{ text-align:center; margin-top:6px; font-size:11px }
+    *{box-sizing:border-box}
+    body{width:58mm;margin:0;font:12px/1.35 system-ui,-apple-system,Segoe UI,Roboto;color:#000}
+    .wrap{padding:8px 8px 12px}
+    .hdr{ text-align:center; margin-bottom:8px }
+    .logo{ width:44px; height:44px; object-fit:contain; border-radius:8px; display:block; margin:0 auto 6px }
+    .store{ font-weight:700; font-size:14px }
+    .muted{ color:#444; font-size:11px }
+    .orderNo{ font-size:36px; font-weight:800; letter-spacing:1px; margin:8px 0 4px }
+    table{ width:100%; border-collapse:collapse; margin-top:6px }
+    th,td{ padding:6px 0 }
+    thead th{ font-weight:700; border-bottom:1px solid #000 }
+    .qty{ width:16px; text-align:left; padding-right:6px; vertical-align:top }
+    .name{ padding-right:6px; word-break:break-word }
+    .price{ width:68px; text-align:right; white-space:nowrap }
+    .baht{ font-weight:600 }
+    .it td{ border-bottom:1px dashed #bfbfbf }
+    .sum td{ border-bottom:none; padding-top:6px }
+    .sum .label{ text-align:left }
+    .sum .val{ text-align:right; font-weight:600 }
+    .total .label{ font-weight:700 }
+    .total .val{ font-weight:800 }
+    .thank{ text-align:center; margin-top:10px; font-size:11px }
   </style></head><body><div class="wrap">
+
     <div class="hdr">
-      <img class="logo" src="nachatlogo.png" alt="logo">
+      <img class="logo" src="nachatlogo.png" alt="logo" />
       <div class="store">ณฉัตร · Nachat POS</div>
       <div class="muted">Tel: 081-323-8287</div>
-      <div class="muted">${new Date(sale.createdAt).toLocaleString('th-TH')} • โต๊ะ ${sale.table} • ${sale.staff}</div>
+      <div class="muted">${new Date(sale.createdAt).toLocaleString('th-TH')}</div>
+      <div class="muted">โต๊ะ ${sale.table||'-'}${sale.staff?` · ${sale.staff}`:''}</div>
+      <div class="orderNo">${orderNo}</div>
     </div>
 
     <table>
-      <thead><tr><th>รายการ</th><th class="c">จำนวน</th><th class="r">ราคา</th><th class="r">รวม</th></tr></thead>
-      <tbody>${lines}</tbody>
+      <thead>
+        <tr><th class="qty"></th><th class="name">รายการ</th><th class="price">ราคา</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
       <tfoot>
-        <tr class="foot"><td colspan="3" class="r"><b>ยอดสุทธิ</b></td><td class="r"><b>฿${fmt(sale.total)}</b></td></tr>
-        <tr class="foot"><td colspan="3" class="r">ชำระ (${sale.payment.method.toUpperCase()})</td><td class="r">฿${fmt(sale.payment.received||0)}</td></tr>
-        <tr class="foot"><td colspan="3" class="r">เงินทอน</td><td class="r">฿${fmt(sale.payment.change||0)}</td></tr>
+        <tr class="sum"><td></td><td class="label">ยอดรวมย่อย</td><td class="val">${nf2.format(subTotal)} ฿</td></tr>
+        ${VAT_RATE>0 ? `<tr class="sum"><td></td><td class="label">VAT ${(VAT_RATE*100).toFixed(0)}%</td><td class="val">${nf2.format(vat)} ฿</td></tr>` : ''}
+        <tr class="sum total"><td></td><td class="label">รวม</td><td class="val">${nf2.format(grand)} ฿</td></tr>
+        <tr class="sum"><td></td><td class="label">ชำระ (${(sale.payment?.method||'').toUpperCase()})</td><td class="val">${nf2.format(sale.payment?.received||0)} ฿</td></tr>
+        <tr class="sum"><td></td><td class="label">เงินสด/เงินทอน</td><td class="val">${nf2.format(sale.payment?.change||0)} ฿</td></tr>
       </tfoot>
     </table>
 
     <div class="thank">ขอบคุณที่อุดหนุนครับ/ค่ะ</div>
   </div>
-  <script>window.print();setTimeout(()=>window.close(),300);<\/script></body></html>`;
+  <script>window.print();setTimeout(()=>window.close(),300);<\/script>
+  </body></html>`;
 
-  const w=window.open('','_blank','width=360,height=600');
-  w.document.write(html); w.document.close();
+  const w = window.open('','_blank','width=380,height=700');
+  w.document.write(html);
+  w.document.close();
 }
 
 /* ---------- ปิดบิล ---------- */
