@@ -32,15 +32,25 @@
     .right{display:flex;justify-content:flex-end}
     .muted{color:var(--muted)}
 
-/* ปุ่มเตือนสำหรับล้างข้อมูล */
-.btn.warning{
-  background:#fff7e6;
-  border-color:#ffb020;
-  color:#8a5a00;
-}
-.btn.warning:hover{
-  background:#fffaef;
-}
+    .btn{padding:9px 12px;border-radius:12px;border:1.5px solid var(--black);background:#fff;color:#111;cursor:pointer}
+    .btn.primary{background:#111;color:#fff}
+    .btn.ghost{background:transparent}
+
+    /* ปุ่มเตือน (pill มน ๆ) สำหรับล้างข้อมูล */
+    .btn.warning{
+      border-radius:999px;
+      background:#fff2f2;
+      border:1.5px solid #d33;
+      color:#b00000;
+      font-weight:600;
+      transition:.25s;
+    }
+    .btn.warning:hover{
+      background:#ffe6e6;
+      transform:translateY(-1px);
+      box-shadow:0 2px 6px rgba(176,0,0,.15);
+    }
+
     input,select{background:#fff;border:1.5px solid var(--black);color:#111;padding:9px 10px;border-radius:12px;width:100%}
     .pill{padding:6px 10px;border-radius:999px;border:1.5px solid var(--black);background:#fff;color:#111}
 
@@ -127,6 +137,11 @@
 
     <!-- REPORTS -->
     <section id="reports" class="tabpane" hidden>
+      <!-- ปุ่มล้าง “รายการขาย” ย้ายมาไว้ที่แท็บรายงาน -->
+      <div class="right" style="margin:8px 0">
+        <button id="btnResetSales" class="btn warning">🧾 ล้างข้อมูล “รายการขาย” ทั้งหมด</button>
+      </div>
+
       <div class="card">
         <div class="row" style="gap:8px;align-items:end">
           <div>
@@ -206,12 +221,6 @@
           <button id="btnAddMenu" class="btn primary">เพิ่ม</button>
         </div>
         <div id="menuTableBox" class="muted">ยังไม่มีเมนู — เพิ่มด้านบนได้เลย</div>
-<!-- ✅ ปุ่มใหม่: ล้างข้อมูลรายการขาย -->
-        <div style="margin-top:16px;display:flex;justify-content:flex-end">
-          <button id="btnResetSales" class="btn warning">
-            🧾 ล้างข้อมูล “รายการขาย” ทั้งหมด
-          </button>
-        </div>
       </div>
     </section>
   </div>
