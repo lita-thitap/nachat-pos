@@ -137,7 +137,7 @@ function openPayModal(id){
   const b=getBills().find(x=>x.id===id); if(!b) return; PAY_BILL=b;
   $('#payTable').value=b.table; $('#payStaff').value=b.staff;
   $('#payTotal').value=`฿${fmt(b.total)}`; $('#payReceived').value=b.total; $('#payChange').value='฿0';
-  $('#payMethod').value='cash'; $('#printReceiptChk').checked=false;
+  $('#payMethod').value='cash';
 
   // เริ่มต้นซ่อน QR ให้เกลี้ยง
   $('#qrBox').hidden = true;
@@ -160,8 +160,7 @@ $('#payMethod')?.addEventListener('change',e=>{
       `ยอดที่ต้องโอน ฿${fmt(amt)}`
     ].join('\n');
 
-    $('#qrNote').textContent = note;
-    $('#qrNote').style.whiteSpace = 'pre-line';      // ✅ บังคับขึ้นบรรทัดใหม่
+    $('#qrNote').textContent = note;         // มี CSS white-space: pre-line ใน index.html
     $('#qrBox').hidden = false;
     if ($('#qrBox').style) $('#qrBox').style.display = 'flex';
     $('#payReceived').value = amt;
@@ -180,43 +179,100 @@ $('#payReceived')?.addEventListener('input',()=>{
   $('#payChange').value=`฿${fmt(Math.max(0,r-t))}`;
 });
 
-/* ---------- พิมพ์บิล ---------- */
+/* ---------- พิมพ์บิล (58 มม.) ---------- */
 function printReceipt(sale){
   const lines=(sale.items||[]).map(i=>`
-    <tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td>
-      <td style="text-align:right">฿${fmt(i.price)}</td>
-      <td style="text-align:right">฿${fmt(i.qty*i.price)}</td></tr>`).join('');
+    <tr>
+      <td class="name">${i.name}</td>
+      <td class="qty">${i.qty}</td>
+      <td class="price">${fmt(i.price)}</td>
+      <td class="sum">${fmt(i.qty*i.price)}</td>
+    </tr>`).join('');
+
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Receipt</title>
-  <style>body{font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto;padding:16px;color:#111}
-  h2{margin:0 0 6px} .muted{color:#666} table{width:100%;border-collapse:collapse;margin-top:8px}
-  th,td{padding:6px;border-bottom:1px solid #eee} .right{text-align:right}</style></head><body>
-  <h2>ณฉัตร | Nachat – POS</h2>
-  <div class="muted">${new Date(sale.createdAt).toLocaleString('th-TH')} • โต๊ะ ${sale.table} • ${sale.staff}</div>
-  <table><thead><tr><th>รายการ</th><th style="text-align:center">จำนวน</th>
-    <th class="right">ราคา</th><th class="right">รวม</th></tr></thead>
-  <tbody>${lines}</tbody><tfoot>
-  <tr><td colspan="3" class="right"><b>ยอดสุทธิ</b></td><td class="right"><b>฿${fmt(sale.total)}</b></td></tr>
-  <tr><td colspan="3" class="right">ชำระ (${sale.payment.method.toUpperCase()})</td><td class="right">฿${fmt(sale.payment.received||0)}</td></tr>
-  <tr><td colspan="3" class="right">เงินทอน</td><td class="right">฿${fmt(sale.payment.change||0)}</td></tr>
-  </tfoot></table><p class="muted right">ขอบคุณครับ/ค่ะ</p>
-  <script>window.print();setTimeout(()=>window.close(),300);<\/script></body></html>`;
-  const w=window.open('','_blank','width=420,height=600'); w.document.write(html); w.document.close();
+  <style>
+    @page { size: 58mm auto; margin: 0; }
+    body{ width:58mm; margin:0; font:12px/1.35 -apple-system,system-ui,Segoe UI,Roboto,"TH Sarabun New",sans-serif; color:#000; }
+    .wrap{ padding:8px 8px 12px; }
+    h1{ font-size:14px; margin:0 0 4px; text-align:center; font-weight:700; }
+    .muted{ color:#333; text-align:center; font-size:11px; margin-bottom:6px; }
+    table{ width:100%; border-collapse:collapse; }
+    thead th{ border-top:1px dashed #000; border-bottom:1px dashed #000; padding:4px 0; font-weight:700; }
+    td{ padding:3px 0; }
+    td.name{ width:48%; }
+    td.qty{ width:12%; text-align:center; }
+    td.price{ width:20%; text-align:right; }
+    td.sum{ width:20%; text-align:right; }
+    tfoot td{ padding:4px 0; }
+    .line{ border-top:1px dashed #000; margin:6px 0; }
+    .right{ text-align:right; }
+    .center{ text-align:center; }
+    .totals td{ padding:3px 0; }
+    .bold{ font-weight:700; }
+    .thanks{ margin-top:6px; text-align:center; font-size:11px; }
+    @media print{ .noprint{ display:none } }
+  </style></head><body>
+  <div class="wrap">
+    <h1>ณฉัตร | Nachat – POS</h1>
+    <div class="muted">${new Date(sale.createdAt).toLocaleString('th-TH')} • โต๊ะ ${sale.table} • ${sale.staff}</div>
+
+    <table>
+      <thead>
+        <tr><th class="name">รายการ</th><th class="qty">จำนวน</th><th class="price">ราคา</th><th class="sum">รวม</th></tr>
+      </thead>
+      <tbody>${lines}</tbody>
+    </table>
+
+    <div class="line"></div>
+
+    <table class="totals">
+      <tr><td class="right bold" style="width:80%">ยอดสุทธิ</td><td class="right bold" style="width:20%">฿${fmt(sale.total)}</td></tr>
+      <tr><td class="right">ชำระ (${sale.payment.method.toUpperCase()})</td><td class="right">฿${fmt(sale.payment.received||0)}</td></tr>
+      <tr><td class="right">เงินทอน</td><td class="right">฿${fmt(sale.payment.change||0)}</td></tr>
+    </table>
+
+    <div class="thanks">ขอบคุณที่อุดหนุนครับ/ค่ะ</div>
+  </div>
+
+  <script>window.print();setTimeout(()=>window.close(),300);<\/script>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=380,height=600'); // 58mm ~ 220-384px ขึ้นกับพรินเตอร์
+  w.document.write(html); w.document.close();
 }
 
-/* ---------- ปิดบิล ---------- */
+/* ---------- ปิดบิล (พิมพ์อัตโนมัติทุกครั้ง) ---------- */
 $('#btnConfirmPay')?.addEventListener('click',ev=>{
   ev.preventDefault(); if(!PAY_BILL) return;
-  const method=$('#payMethod').value, received=Number($('#payReceived').value||0), total=PAY_BILL.total;
-  if(method==='cash' && received<total) return alert('จำนวนเงินไม่พอ (เงินสด)');
-  const sale={ id:'S'+Date.now(), table:PAY_BILL.table, staff:PAY_BILL.staff, items:PAY_BILL.items,
-    total, createdAt:new Date().toISOString(), payment:{method,received,change:Math.max(0,received-total)} };
+
+  const method=$('#payMethod').value;
+  const received=Number($('#payReceived').value||0);
+  const total=PAY_BILL.total;
+
+  if(method==='cash' && received<total){
+    alert('จำนวนเงินไม่พอ (เงินสด)'); return;
+  }
+
+  const sale={
+    id:'S'+Date.now(),
+    table:PAY_BILL.table,
+    staff:PAY_BILL.staff,
+    items:PAY_BILL.items,
+    total,
+    createdAt:new Date().toISOString(),
+    payment:{ method, received, change:Math.max(0,received-total) }
+  };
+
   const sales=getSales(); sales.push(sale); setSales(sales);
   if(typeof enqueueSale==='function') enqueueSale(sale); // sync -> Sheets
+
   setBills(getBills().filter(x=>x.id!==PAY_BILL.id));
   $('#payModal').close();
-  if($('#printReceiptChk').checked) printReceipt(sale);
+
+  // พิมพ์ใบเสร็จอัตโนมัติ
+  printReceipt(sale);
+
   PAY_BILL=null;
-  alert('ปิดบิลสำเร็จ');
   renderOpenBills();
   if(!$('#reports')?.hidden) renderReports();
 });
@@ -353,7 +409,7 @@ function renderReports(){
   const rows=sales.filter(s=>{ const d=new Date(s.createdAt||s.updatedAt||Date.now()); return d>=from && d<=to; });
   const sum=rows.reduce((a,b)=>a+Number(b.total||0),0), avg=rows.length?sum/rows.length:0;
   $('#kpiSum') && ($('#kpiSum').textContent='฿'+fmt(sum));
-  $('#kpiBills') && ($('#kpiBills').textContent=rows.length));
+  $('#kpiBills') && ($('#kpiBills').textContent=rows.length);   // ✅ แก้วงเล็บเกิน
   $('#kpiAvg') && ($('#kpiAvg').textContent='฿'+fmt(avg));
   const map=new Map(); rows.forEach(r=>(r.items||[]).forEach(i=>{ const k=i.name||i.id; map.set(k,(map.get(k)||0)+(Number(i.qty)||1)); }));
   const top=[...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5), ul=$('#topList');
