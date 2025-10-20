@@ -3,21 +3,27 @@ const K = { MENU:'pos_menu', CART:'pos_cart', BILLS:'pos_bills', SALES:'pos_sale
 const $ = s => document.querySelector(s);
 const fmt = n => Number(n||0).toLocaleString('th-TH');
 
-/* Seed menu */
-(function(){
-  if(localStorage.getItem(K.MENU)) return;
-  localStorage.setItem(K.MENU, JSON.stringify([
-    {id:'Z99',name:'ชุดรวมหมูถาด',cat:'SET',price:299},
-    {id:'Z98',name:'ชุดหมูทะเล',cat:'SET',price:299},
-    {id:'A10',name:'สันคอหมูสไลซ์ (ถาด)',cat:'AD',price:50},
-    {id:'A20',name:'เบคอนรมควัน (ถาด)',cat:'AD',price:50},
-    {id:'A30',name:'กุ้ง (ถาด)',cat:'AD',price:50},
-    {id:'D10',name:'น้ำเปล่า (ขวด)',cat:'DW',price:15},
-    {id:'D20',name:'น้ำแข็งถัง',cat:'DW',price:30},
-    {id:'P30',name:'โปรเบียร์ 3 ขวด',cat:'PR',price:210},
-    {id:'P60',name:'โปรเบียร์ 6 ขวด',cat:'PR',price:410},
-  ]));
-})();
+/* ===== Default menu + seeding ที่ทนทาน ===== */
+const DEFAULT_MENU = [
+  {id:'Z99',name:'ชุดรวมหมูถาด',cat:'SET',price:299},
+  {id:'Z98',name:'ชุดหมูทะเล',cat:'SET',price:299},
+  {id:'A10',name:'สันคอหมูสไลซ์ (ถาด)',cat:'AD',price:50},
+  {id:'A20',name:'เบคอนรมควัน (ถาด)',cat:'AD',price:50},
+  {id:'A30',name:'กุ้ง (ถาด)',cat:'AD',price:50},
+  {id:'D10',name:'น้ำเปล่า (ขวด)',cat:'DW',price:15},
+  {id:'D20',name:'น้ำแข็งถัง',cat:'DW',price:30},
+  {id:'P30',name:'โปรเบียร์ 3 ขวด',cat:'PR',price:210},
+  {id:'P60',name:'โปรเบียร์ 6 ขวด',cat:'PR',price:410},
+];
+
+function ensureMenuSeed(){
+  let arr;
+  try { arr = JSON.parse(localStorage.getItem(K.MENU) || '[]'); }
+  catch(e){ arr = []; }
+  if (!Array.isArray(arr) || arr.length === 0){
+    localStorage.setItem(K.MENU, JSON.stringify(DEFAULT_MENU));
+  }
+}
 
 /* State helpers */
 const getMenu = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
@@ -29,7 +35,7 @@ const setBills= v => localStorage.setItem(K.BILLS, JSON.stringify(v));
 const getSales= () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
 const setSales= v => localStorage.setItem(K.SALES, JSON.stringify(v));
 
-/* POS: render menu */
+/* ---------- POS: render menu ---------- */
 function groupByCat(a){ const m=new Map(); a.forEach(it=>{if(!m.has(it.cat)) m.set(it.cat,[]); m.get(it.cat).push(it)}); return m; }
 function renderMenu(){
   const box = $('#menuPanels'); if(!box) return; box.innerHTML='';
@@ -47,7 +53,7 @@ function renderMenu(){
   }
 }
 
-/* Cart */
+/* ---------- Cart ---------- */
 function renderCart(){
   const list=$('#cartList'), total=$('#cartTotal'); if(!list||!total) return;
   const cart=getCart(); if(!cart.length){ list.textContent='ยังไม่มีรายการ'; total.textContent='0'; return; }
@@ -71,7 +77,7 @@ function renderCart(){
 }
 $('#btnClearCart')?.addEventListener('click',()=>{ setCart([]); renderCart(); });
 
-/* Open bill */
+/* ---------- Open bill ---------- */
 $('#btnOpenBill')?.addEventListener('click',()=>{
   const table=$('#inpTable').value.trim()||'N?';
   const staff=$('#inpStaff').value.trim()||'staff';
@@ -91,7 +97,7 @@ $('#btnAddToBill')?.addEventListener('click',()=>{
   setBills(bills); setCart([]); renderCart(); renderOpenBills();
 });
 
-/* Bills list (ดู/แก้ไข/ยกเลิก/ปิด) */
+/* ---------- Bills list (ดู/แก้ไข/ยกเลิก/ปิด) ---------- */
 function renderOpenBills(){
   const box=$('#openBills'); if(!box) return; box.innerHTML='';
   const bills=getBills(); if(!bills.length){ box.innerHTML='<div class="muted">ยังไม่มีบิลที่เปิดอยู่</div>'; return; }
@@ -125,43 +131,34 @@ function renderOpenBills(){
   });
 }
 
-/* Pay modal */
+/* ---------- Pay modal ---------- */
 let PAY_BILL=null;
 function openPayModal(id){
   const b=getBills().find(x=>x.id===id); if(!b) return; PAY_BILL=b;
-  $('#payTable').value=b.table;
-  $('#payStaff').value=b.staff;
-  $('#payTotal').value=`฿${fmt(b.total)}`;
-  $('#payReceived').value=b.total;
-  $('#payChange').value='฿0';
-  $('#payMethod').value='cash';
-  $('#printReceiptChk').checked=false;
-
-  // ซ่อน QR ให้หายจริง ๆ ตอนเปิด modal
-  const qrBox = $('#qrBox');
-  qrBox.hidden = true;
-  qrBox.style.display = 'none';
+  $('#payTable').value=b.table; $('#payStaff').value=b.staff;
+  $('#payTotal').value=`฿${fmt(b.total)}`; $('#payReceived').value=b.total; $('#payChange').value='฿0';
+  $('#payMethod').value='cash'; $('#printReceiptChk').checked=false;
+  // เริ่มต้นซ่อน QR
+  $('#qrBox').hidden = true;
   $('#qrImg').src = '';
   $('#qrNote').textContent = '';
-
   $('#payModal').showModal();
 }
 
-$('#payMethod')?.addEventListener('change', e=>{
-  const qrBox = $('#qrBox');
-  if(e.target.value==='scan'){
-    const amt = PAY_BILL?.total || 0;
-    const QR_URL = 'qrcode.png';
+$('#payMethod')?.addEventListener('change',e=>{
+  const isScan = e.target.value === 'scan';
+  if(isScan){
+    const amt=PAY_BILL?.total||0;
+    const QR_URL='qrcode.png';
     $('#qrImg').src = QR_URL;
     $('#qrNote').textContent = `KBANK · กรพพร ทรัพย์คงเดช พร้อมเพย์: 0813238287 ยอดที่ต้องโอน ฿${fmt(amt)}`;
-
-    qrBox.hidden = false;
-    qrBox.style.display = '';       // แสดงกลับมา
-    $('#payReceived').value = amt;  // โอนเท่ายอดรวม
+    $('#qrBox').hidden = false;
+    $('#payReceived').value = amt;
     $('#payChange').value = '฿0';
   }else{
-    qrBox.hidden = true;
-    qrBox.style.display = 'none';   // ซ่อนและไม่เผื่อพื้นที่
+    $('#qrBox').hidden = true;   // เงินสด = ซ่อนทั้งบล็อก ไม่เหลือช่องว่าง
+    $('#qrImg').src = '';
+    $('#qrNote').textContent = '';
   }
 });
 
@@ -170,7 +167,7 @@ $('#payReceived')?.addEventListener('input',()=>{
   $('#payChange').value=`฿${fmt(Math.max(0,r-t))}`;
 });
 
-/* พิมพ์บิล */
+/* ---------- พิมพ์บิล ---------- */
 function printReceipt(sale){
   const lines=(sale.items||[]).map(i=>`
     <tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td>
@@ -193,7 +190,7 @@ function printReceipt(sale){
   const w=window.open('','_blank','width=420,height=600'); w.document.write(html); w.document.close();
 }
 
-/* ปิดบิล */
+/* ---------- ปิดบิล ---------- */
 $('#btnConfirmPay')?.addEventListener('click',ev=>{
   ev.preventDefault(); if(!PAY_BILL) return;
   const method=$('#payMethod').value, received=Number($('#payReceived').value||0), total=PAY_BILL.total;
@@ -201,12 +198,17 @@ $('#btnConfirmPay')?.addEventListener('click',ev=>{
   const sale={ id:'S'+Date.now(), table:PAY_BILL.table, staff:PAY_BILL.staff, items:PAY_BILL.items,
     total, createdAt:new Date().toISOString(), payment:{method,received,change:Math.max(0,received-total)} };
   const sales=getSales(); sales.push(sale); setSales(sales);
-  if(typeof enqueueSale==='function') enqueueSale(sale); // ให้ sync.js จัดการคิวไป Sheets
-  setBills(getBills().filter(x=>x.id!==PAY_BILL.id)); $('#payModal').close(); if($('#printReceiptChk').checked) printReceipt(sale);
-  PAY_BILL=null; alert('ปิดบิลสำเร็จ'); renderOpenBills(); if(!$('#reports')?.hidden) renderReports();
+  if(typeof enqueueSale==='function') enqueueSale(sale); // sync -> Sheets
+  setBills(getBills().filter(x=>x.id!==PAY_BILL.id));
+  $('#payModal').close();
+  if($('#printReceiptChk').checked) printReceipt(sale);
+  PAY_BILL=null;
+  alert('ปิดบิลสำเร็จ');
+  renderOpenBills();
+  if(!$('#reports')?.hidden) renderReports();
 });
 
-/* Settings: เมนู */
+/* ---------- Settings: เมนู (เพิ่ม/แก้ไข inline/ลบ) ---------- */
 function renderMenuTable(){
   const box = $('#menuTableBox'); if(!box) return;
   const menu = getMenu();
@@ -282,12 +284,8 @@ function renderMenuTable(){
         </td>
       `;
 
-      // ยกเลิก = รีเฟรชตารางเดิม
-      tr.querySelector('[data-cancel]').addEventListener('click', ()=>{
-        renderMenuTable();
-      });
+      tr.querySelector('[data-cancel]').addEventListener('click', ()=>{ renderMenuTable(); });
 
-      // บันทึกค่าใหม่
       tr.querySelector('[data-save]').addEventListener('click', ()=>{
         const newId    = tr.querySelector('.edit-code').value.trim().toUpperCase();
         const newName  = tr.querySelector('.edit-name').value.trim();
@@ -297,32 +295,36 @@ function renderMenuTable(){
         if(!newId || !newName || !(newCat in CAT) || newPrice<0){
           alert('กรอกข้อมูลให้ถูกต้อง (รหัส/ชื่อ/หมวด/ราคา)'); return;
         }
-
-        // กันรหัสซ้ำ (ยกเว้นกรณีไม่เปลี่ยนรหัส)
         if(newId!==id && all.some(x=>x.id===newId)){
           alert('รหัสเมนูซ้ำ กรุณาใช้รหัสอื่น'); return;
         }
-
-        // อัปเดตใน array
         const idx = all.findIndex(x=>x.id===id);
         all[idx] = { id:newId, name:newName, cat:newCat, price:newPrice };
-
         setMenu(all);
-        renderMenuTable();   // รีเฟรชตาราง
-        renderMenu();        // รีเฟรชปุ่มสั่งในหน้า POS
+        renderMenuTable(); renderMenu();
       });
     });
   });
 }
+
 $('#btnAddMenu')?.addEventListener('click',()=>{
   const name=$('#newName').value.trim(), price=Number($('#newPrice').value||0), cat=$('#newCat').value;
   const code=($('#newCode').value.trim()||('X'+Math.random().toString(36).slice(2,6))).toUpperCase();
   if(!name||price<=0) return alert('กรอกชื่อ/ราคาให้ถูกต้อง');
   const menu=getMenu(); menu.push({id:code,name,cat,price}); setMenu(menu);
-  $('#newName').value=''; $('#newPrice').value=''; $('#newCode').value=''; renderMenuTable(); renderMenu();
+  $('#newName').value=''; $('#newPrice').value=''; $('#newCode').value='';
+  renderMenuTable(); renderMenu();
 });
 
-/* Reports */
+/* ปุ่ม “คืนค่าเมนูเริ่มต้น” */
+document.getElementById('btnRestoreMenu')?.addEventListener('click', ()=>{
+  if(!confirm('ยืนยันคืนค่าเมนูเริ่มต้นทั้งหมดหรือไม่? (เมนูที่แก้เองจะถูกแทนที่)')) return;
+  localStorage.setItem(K.MENU, JSON.stringify(DEFAULT_MENU));
+  renderMenuTable(); renderMenu();
+  alert('คืนค่าเมนูเริ่มต้นเรียบร้อย ✅');
+});
+
+/* ---------- Reports ---------- */
 function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
 function endOfDay(d){ const x=new Date(d); x.setHours(23,59,59,999); return x; }
 function getUIRange(){
@@ -340,31 +342,19 @@ function renderReports(){
   $('#kpiSum') && ($('#kpiSum').textContent='฿'+fmt(sum));
   $('#kpiBills') && ($('#kpiBills').textContent=rows.length);
   $('#kpiAvg') && ($('#kpiAvg').textContent='฿'+fmt(avg));
-
-  const map=new Map();
-  rows.forEach(r=>(r.items||[]).forEach(i=>{
-    const k=i.name||i.id; map.set(k,(map.get(k)||0)+(Number(i.qty)||1));
-  }));
-
+  const map=new Map(); rows.forEach(r=>(r.items||[]).forEach(i=>{ const k=i.name||i.id; map.set(k,(map.get(k)||0)+(Number(i.qty)||1)); }));
   const top=[...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5), ul=$('#topList');
-  if(ul) ul.innerHTML=top.length
-    ? top.map(([n,q])=>`<li><span>${n}</span><b>${q}</b></li>`).join('')
-    : '<div class="muted">ยังไม่มีข้อมูล</div>';
-
-  const box=$('#salesTableBox');
-  if(box){
+  if(ul) ul.innerHTML=top.length?top.map(([n,q])=>`<li><span>${n}</span><b>${q}</b></li>`).join(''):'<div class="muted">ยังไม่มีข้อมูล</div>';
+  const box=$('#salesTableBox'); if(box){
     if(!rows.length){ box.innerHTML='<div class="muted">ยังไม่มีข้อมูล</div>'; return; }
     box.innerHTML=`<table>
-      <thead><tr><th>วันที่เวลา</th><th>โต๊ะ</th>
-      <th style="text-align:right">ยอดสุทธิ</th><th>ชำระ</th></tr></thead>
-      <tbody>${
-        rows.map(r=>`<tr>
-          <td>${new Date(r.createdAt||r.updatedAt).toLocaleString('th-TH')}</td>
-          <td>${r.table||'-'}</td>
-          <td style="text-align:right">฿${fmt(r.total||0)}</td>
-          <td>${(r.payment?.method||'').toUpperCase()}</td>
-        </tr>`).join('')
-      }</tbody>
+      <thead><tr><th>วันที่เวลา</th><th>โต๊ะ</th><th style="text-align:right">ยอดสุทธิ</th><th>ชำระ</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${new Date(r.createdAt||r.updatedAt).toLocaleString('th-TH')}</td>
+        <td>${r.table||'-'}</td>
+        <td style="text-align:right">฿${fmt(r.total||0)}</td>
+        <td>${(r.payment?.method||'').toUpperCase()}</td>
+      </tr>`).join('')}</tbody>
     </table>`;
   }
 }
@@ -373,17 +363,16 @@ $('#selPreset')?.addEventListener('change',renderReports);
 $('#dFrom')?.addEventListener('change',renderReports);
 $('#dTo')?.addEventListener('change',renderReports);
 
-/* ====== ปุ่มล้างเฉพาะข้อมูลรายการขาย ====== */
+/* ====== ล้างเฉพาะข้อมูล “รายการขาย” ====== */
 document.getElementById('btnResetSales')?.addEventListener('click', () => {
   if (!confirm('ยืนยันล้างข้อมูล “รายการขาย” ทั้งหมดหรือไม่?\n(ข้อมูลในรายงานยอดขายจะถูกล้างออก แต่บิลและเมนูจะยังอยู่เหมือนเดิม)')) return;
-
   localStorage.removeItem(K.SALES);
   alert('ล้างข้อมูล “รายการขาย” เรียบร้อยแล้ว ✅');
-
-  try { renderReports(); } catch (err) { console.warn('ไม่สามารถรีเฟรชรายงานได้', err); }
+  try { renderReports(); } catch {}
 });
 
-/* Boot */
+/* ---------- Boot ---------- */
 window.addEventListener('load',()=>{
+  ensureMenuSeed();                 // สำคัญ: เติมเมนูเริ่มต้นถ้าเมนูว่าง/พัง
   renderMenu(); renderCart(); renderOpenBills(); renderMenuTable(); renderReports();
 });
