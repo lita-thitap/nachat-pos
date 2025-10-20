@@ -1,6 +1,6 @@
 /* ========== Nachat POS – Google Sheets Sync (frontend) ========== */
 const SYNC = {
-  defaultUrl: "https://script.google.com/macros/s/AKfycbxPcGHuSgNKgos5qKZRC87E_SEgfFYIfNZjlvPuL11KosZweJqtkxanZe3rvbcSLVW6/exec", // ใส่ลิงก์ Web App ของคุณได้ หรือปล่อยว่างแล้ววางผ่าน UI
+  defaultUrl: "https://script.google.com/macros/s/AKfycbwfborY3r5xqIRiO1Bcs5wOHHQcEpxV4oupjyOZGVdMorWYxe9GcmhuHqpsu-QMQJpF/exec", // ใส่ลิงก์ Web App ของคุณได้ หรือปล่อยว่างแล้ววางผ่าน UI
   urlKey: "POS_WEBAPP_URL",
   modeKey: "POS_SYNC_MODE",  // 'auto' | 'manual'
   queueKey: "POS_SYNC_QUEUE",
