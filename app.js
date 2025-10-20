@@ -45,7 +45,6 @@ function setDisabled(el, is){
   el.disabled = !!is;
   el.style.opacity = is ? 0.5 : 1;
   el.style.cursor  = is ? 'not-allowed' : 'pointer';
-  // เติม/เอา class ghost เพื่อแมตช์ธีม
   el.classList.toggle('ghost', !!is);
   el.title = is ? 'มีบิลของโต๊ะนี้อยู่แล้ว' : '';
 }
@@ -301,7 +300,7 @@ $('#btnConfirmPay')?.addEventListener('click',ev=>{
   if(!$('#reports')?.hidden) renderReports();
 });
 
-/* ---------- Settings: เมนู (เพิ่ม/แก้ไข inline/ลบ) ---------- */
+/* ---------- Settings: เมนู (เพิ่ม/แก้ไข inline/ลบ) + sync ---------- */
 function renderMenuTable(){
   const box = $('#menuTableBox'); if(!box) return;
   const menu = getMenu();
@@ -347,6 +346,7 @@ function renderMenuTable(){
       const id = btn.dataset.del;
       const next = getMenu().filter(x=>x.id!==id);
       setMenu(next);
+      if (typeof enqueueMenu==='function') enqueueMenu(getMenu()); // ✅ sync
       renderMenuTable(); renderMenu();
     });
   });
@@ -395,6 +395,7 @@ function renderMenuTable(){
         const idx = all.findIndex(x=>x.id===id);
         all[idx] = { id:newId, name:newName, cat:newCat, price:newPrice };
         setMenu(all);
+        if (typeof enqueueMenu==='function') enqueueMenu(getMenu()); // ✅ sync
         renderMenuTable(); renderMenu();
       });
     });
@@ -406,6 +407,7 @@ $('#btnAddMenu')?.addEventListener('click',()=>{
   const code=($('#newCode').value.trim()||('X'+Math.random().toString(36).slice(2,6))).toUpperCase();
   if(!name||price<=0) return alert('กรอกชื่อ/ราคาให้ถูกต้อง');
   const menu=getMenu(); menu.push({id:code,name,cat,price}); setMenu(menu);
+  if (typeof enqueueMenu==='function') enqueueMenu(getMenu()); // ✅ sync
   $('#newName').value=''; $('#newPrice').value=''; $('#newCode').value='';
   renderMenuTable(); renderMenu();
 });
@@ -414,6 +416,7 @@ $('#btnAddMenu')?.addEventListener('click',()=>{
 document.getElementById('btnRestoreMenu')?.addEventListener('click', ()=>{
   if(!confirm('ยืนยันคืนค่าเมนูเริ่มต้นทั้งหมดหรือไม่? (เมนูที่แก้เองจะถูกแทนที่)')) return;
   localStorage.setItem(K.MENU, JSON.stringify(DEFAULT_MENU));
+  if (typeof enqueueMenu==='function') enqueueMenu(getMenu()); // ✅ sync
   renderMenuTable(); renderMenu();
   alert('คืนค่าเมนูเริ่มต้นเรียบร้อย ✅');
 });
@@ -465,6 +468,11 @@ document.getElementById('btnResetSales')?.addEventListener('click', () => {
   try { renderReports(); } catch {}
 });
 
+/* ---------- Cross-tab sync (เครื่องเดียวหลายแท็บ) ---------- */
+window.addEventListener('storage', (e)=>{
+  if (e.key === K.MENU) { renderMenu(); renderMenuTable(); }
+});
+
 /* ---------- Boot ---------- */
 window.addEventListener('load', () => {
   ensureMenuSeed();
@@ -472,6 +480,10 @@ window.addEventListener('load', () => {
   if (!menu || !menu.length) {
     localStorage.setItem(K.MENU, JSON.stringify(DEFAULT_MENU));
   }
+
+  // ดึงเมนูจาก Cloud ถ้ามีการตั้งค่า sync.js ไว้
+  try { window.pullMenuFromCloud?.(); } catch {}
+
   renderMenu(); renderCart(); renderOpenBills(); renderMenuTable(); renderReports();
   refreshOpenButtonState(); // ตรวจปุ่มเปิดบิลตั้งแต่โหลดหน้า
 });
