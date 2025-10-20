@@ -3,7 +3,7 @@ const K = { MENU:'pos_menu', CART:'pos_cart', BILLS:'pos_bills', SALES:'pos_sale
 const $ = s => document.querySelector(s);
 const fmt = n => Number(n||0).toLocaleString('th-TH');
 
-/* ===== Default menu + seeding ที่ทนทาน ===== */
+/* ===== Default menu + seeding ===== */
 const DEFAULT_MENU = [
   {id:'Z99',name:'ชุดรวมหมูถาด',cat:'SET',price:299},
   {id:'Z98',name:'ชุดหมูทะเล',cat:'SET',price:299},
@@ -139,7 +139,7 @@ function openPayModal(id){
   $('#payTotal').value=`฿${fmt(b.total)}`; $('#payReceived').value=b.total; $('#payChange').value='฿0';
   $('#payMethod').value='cash';
 
-  // ซ่อน QR เริ่มต้น
+  // เริ่มต้นซ่อน QR ให้เกลี้ยง
   $('#qrBox').hidden = true;
   if ($('#qrBox').style) $('#qrBox').style.display = 'none';
   $('#qrImg').src = '';
@@ -151,8 +151,17 @@ $('#payMethod')?.addEventListener('change',e=>{
   const isScan = e.target.value === 'scan';
   if(isScan){
     const amt = PAY_BILL?.total || 0;
-    $('#qrImg').src = 'qrcode.png';
-    $('#qrNote').textContent = ['KBANK · กชพร ทรัพย์คงเดช','promptpay: 0813238287',`ยอดที่ต้องโอน ฿${fmt(amt)}`].join('\n');
+    const QR_URL = 'qrcode.png';
+    $('#qrImg').src = QR_URL;
+
+    const note = [
+      'KBANK · กชพร ทรัพย์คงเดช',
+      'promptpay: 0813238287',
+      `ยอดที่ต้องโอน ฿${fmt(amt)}`
+    ].join('\n');
+
+    $('#qrNote').textContent = note;
+    $('#qrNote').style.whiteSpace = 'pre-line';
     $('#qrBox').hidden = false;
     if ($('#qrBox').style) $('#qrBox').style.display = 'flex';
     $('#payReceived').value = amt;
@@ -170,107 +179,83 @@ $('#payReceived')?.addEventListener('input',()=>{
   $('#payChange').value=`฿${fmt(Math.max(0,r-t))}`;
 });
 
-/* ---------- พิมพ์บิล (58 มม. + โลโก้/ชื่อร้าน/โทร) ---------- */
+/* ---------- พิมพ์บิล (58 มม. พร้อมโลโก้/ชื่อร้าน/เบอร์) ---------- */
 function printReceipt(sale){
   const lines=(sale.items||[]).map(i=>`
     <tr>
-      <td class="name">${i.name}</td>
-      <td class="qty">${i.qty}</td>
-      <td class="price">${fmt(i.price)}</td>
-      <td class="sum">${fmt(i.qty*i.price)}</td>
+      <td>${i.name}</td>
+      <td class="c">${i.qty}</td>
+      <td class="r">฿${fmt(i.price)}</td>
+      <td class="r">฿${fmt(i.qty*i.price)}</td>
     </tr>`).join('');
 
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Receipt</title>
   <style>
     @page { size: 58mm auto; margin: 0; }
-    body{ width:58mm; margin:0; font:12px/1.35 -apple-system,system-ui,Segoe UI,Roboto,"TH Sarabun New",sans-serif; color:#000; }
-    .wrap{ padding:8px 8px 12px; }
-    .logo{ display:block; margin:0 auto 4px; width:28mm; max-width:48px; height:auto; }
-    .store{ text-align:center; font-weight:700; font-size:14px; }
-    .contact{ text-align:center; font-size:11px; margin-top:2px; }
-    .muted{ color:#333; text-align:center; font-size:11px; margin:6px 0; }
-    table{ width:100%; border-collapse:collapse; }
-    thead th{ border-top:1px dashed #000; border-bottom:1px dashed #000; padding:4px 0; font-weight:700; }
-    td{ padding:3px 0; }
-    td.name{ width:48%; }
-    td.qty{ width:12%; text-align:center; }
-    td.price{ width:20%; text-align:right; }
-    td.sum{ width:20%; text-align:right; }
-    .line{ border-top:1px dashed #000; margin:6px 0; }
-    .right{ text-align:right; }
-    .totals td{ padding:3px 0; }
-    .bold{ font-weight:700; }
-    .thanks{ margin-top:6px; text-align:center; font-size:11px; }
-    @media print{ .noprint{ display:none } }
-  </style></head><body>
-  <div class="wrap">
-    <img src="nachatlogo.png" class="logo" alt="logo" onerror="this.style.display='none'">
-    <div class="store">ณฉัตร | Nachat – POS</div>
-    <div class="contact">โทร 081-323-8287</div>
-    <div class="muted">${new Date(sale.createdAt).toLocaleString('th-TH')} • โต๊ะ ${sale.table} • ${sale.staff}</div>
+    body{ width:58mm; margin:0; font:12px/1.35 system-ui,-apple-system,Segoe UI,Roboto; color:#000; }
+    .wrap{ padding:6px 6px 10px; }
+    .hdr{ text-align:center; margin-bottom:6px; }
+    .logo{ width:42px; height:42px; object-fit:contain; border-radius:8px; display:block; margin:0 auto 4px; }
+    .store{ font-weight:700; font-size:13px; }
+    .muted{ color:#444; font-size:11px; }
+    table{ width:100%; border-collapse:collapse; margin-top:6px; }
+    th,td{ padding:4px 0; border-bottom:1px dashed #999; }
+    thead th{ border-bottom:1px solid #000; font-weight:700; }
+    .r{ text-align:right } .c{ text-align:center }
+    .foot td{ border-bottom:none; padding-top:4px; }
+    .thank{ text-align:center; margin-top:6px; font-size:11px }
+  </style></head><body><div class="wrap">
+    <div class="hdr">
+      <img class="logo" src="nachatlogo.png" alt="logo">
+      <div class="store">ณฉัตร · Nachat POS</div>
+      <div class="muted">Tel: 081-323-8287</div>
+      <div class="muted">${new Date(sale.createdAt).toLocaleString('th-TH')} • โต๊ะ ${sale.table} • ${sale.staff}</div>
+    </div>
 
     <table>
-      <thead>
-        <tr><th class="name">รายการ</th><th class="qty">จำนวน</th><th class="price">ราคา</th><th class="sum">รวม</th></tr>
-      </thead>
+      <thead><tr><th>รายการ</th><th class="c">จำนวน</th><th class="r">ราคา</th><th class="r">รวม</th></tr></thead>
       <tbody>${lines}</tbody>
+      <tfoot>
+        <tr class="foot"><td colspan="3" class="r"><b>ยอดสุทธิ</b></td><td class="r"><b>฿${fmt(sale.total)}</b></td></tr>
+        <tr class="foot"><td colspan="3" class="r">ชำระ (${sale.payment.method.toUpperCase()})</td><td class="r">฿${fmt(sale.payment.received||0)}</td></tr>
+        <tr class="foot"><td colspan="3" class="r">เงินทอน</td><td class="r">฿${fmt(sale.payment.change||0)}</td></tr>
+      </tfoot>
     </table>
 
-    <div class="line"></div>
-
-    <table class="totals">
-      <tr><td class="right bold" style="width:80%">ยอดสุทธิ</td><td class="right bold" style="width:20%">฿${fmt(sale.total)}</td></tr>
-      <tr><td class="right">ชำระ (${sale.payment.method.toUpperCase()})</td><td class="right">฿${fmt(sale.payment.received||0)}</td></tr>
-      <tr><td class="right">เงินทอน</td><td class="right">฿${fmt(sale.payment.change||0)}</td></tr>
-    </table>
-
-    <div class="thanks">ขอบคุณที่อุดหนุนครับ/ค่ะ</div>
+    <div class="thank">ขอบคุณที่อุดหนุนครับ/ค่ะ</div>
   </div>
+  <script>window.print();setTimeout(()=>window.close(),300);<\/script></body></html>`;
 
-  <script>window.print();setTimeout(()=>window.close(),300);<\/script>
-  </body></html>`;
-
-  const w=window.open('','_blank','width=380,height=600');
+  const w=window.open('','_blank','width=360,height=600');
   w.document.write(html); w.document.close();
 }
 
-/* ---------- ปิดบิล (พิมพ์อัตโนมัติทุกครั้ง) ---------- */
+/* ---------- ปิดบิล ---------- */
 $('#btnConfirmPay')?.addEventListener('click',ev=>{
   ev.preventDefault(); if(!PAY_BILL) return;
+  const method=$('#payMethod').value, received=Number($('#payReceived').value||0), total=PAY_BILL.total;
+  if(method==='cash' && received<total) return alert('จำนวนเงินไม่พอ (เงินสด)');
 
-  const method=$('#payMethod').value;
-  const received=Number($('#payReceived').value||0);
-  const total=PAY_BILL.total;
-
-  if(method==='cash' && received<total){
-    alert('จำนวนเงินไม่พอ (เงินสด)'); return;
-  }
-
-  const sale={
-    id:'S'+Date.now(),
-    table:PAY_BILL.table,
-    staff:PAY_BILL.staff,
-    items:PAY_BILL.items,
-    total,
-    createdAt:new Date().toISOString(),
-    payment:{ method, received, change:Math.max(0,received-total) }
-  };
+  const sale={ id:'S'+Date.now(), table:PAY_BILL.table, staff:PAY_BILL.staff, items:PAY_BILL.items,
+    total, createdAt:new Date().toISOString(),
+    payment:{method,received,change:Math.max(0,received-total)} };
 
   const sales=getSales(); sales.push(sale); setSales(sales);
-  if(typeof enqueueSale==='function') enqueueSale(sale);
+  if(typeof enqueueSale==='function') enqueueSale(sale); // ให้ sync.js จัดการส่ง Google Sheets (ถ้ามี)
 
   setBills(getBills().filter(x=>x.id!==PAY_BILL.id));
   $('#payModal').close();
 
-  // พิมพ์ใบเสร็จอัตโนมัติ
+  // ✅ พิมพ์ใบเสร็จทุกครั้งที่ปิดบิล (58 มม.)
   printReceipt(sale);
 
   PAY_BILL=null;
+  alert('ปิดบิลสำเร็จ');
   renderOpenBills();
   if(!$('#reports')?.hidden) renderReports();
 });
 
-/* ---------- Settings: เมนู ---------- */
+/* ---------- Settings: เมนู (เพิ่ม/แก้ไข inline/ลบ) ---------- */
 function renderMenuTable(){
   const box = $('#menuTableBox'); if(!box) return;
   const menu = getMenu();
@@ -354,7 +339,8 @@ function renderMenuTable(){
         const newCat   = tr.querySelector('.edit-cat').value;
         const newPrice = Number(tr.querySelector('.edit-price').value||0);
 
-        if(!newId || !newName || !(newCat in CAT) || newPrice<0){
+        const CATMAP = {SET:1,AD:1,DW:1,PR:1};
+        if(!newId || !newName || !CATMAP[newCat] || newPrice<0){
           alert('กรอกข้อมูลให้ถูกต้อง (รหัส/ชื่อ/หมวด/ราคา)'); return;
         }
         if(newId!==id && all.some(x=>x.id===newId)){
@@ -433,8 +419,12 @@ document.getElementById('btnResetSales')?.addEventListener('click', () => {
   try { renderReports(); } catch {}
 });
 
-/* ---------- Boot ---------- */
-window.addEventListener('load',()=>{
-  ensureMenuSeed();                 // เติมเมนูเริ่มต้นถ้าหาย/พัง
+/* ---------- Boot: กันเมนูหายหลังรีเฟรช ---------- */
+window.addEventListener('load', () => {
+  ensureMenuSeed();                           // เติมเมนูเริ่มต้นถ้ายังไม่มี
+  const menu = getMenu();                     // กันพลาดอีกชั้น
+  if (!menu || !menu.length) {
+    localStorage.setItem(K.MENU, JSON.stringify(DEFAULT_MENU));
+  }
   renderMenu(); renderCart(); renderOpenBills(); renderMenuTable(); renderReports();
 });
