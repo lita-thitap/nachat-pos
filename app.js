@@ -148,13 +148,20 @@ function openPayModal(id){
 $('#payMethod')?.addEventListener('change',e=>{
   const isScan = e.target.value === 'scan';
   if(isScan){
-    const amt=PAY_BILL?.total||0;
-    const QR_URL='qrcode.png';
-    $('#qrImg').src = QR_URL;
-    $('#qrNote').textContent = `KBANK · กรพพร ทรัพย์คงเดช พร้อมเพย์: 0813238287 ยอดที่ต้องโอน ฿${fmt(amt)}`;
-    $('#qrBox').hidden = false;
-    $('#payReceived').value = amt;
-    $('#payChange').value = '฿0';
+    const amt = PAY_BILL?.total || 0;
+const QR_URL = 'qrcode.png';
+$('#qrImg').src = QR_URL;
+
+const note = [
+  'KBANK · กชพร ทรัพย์คงเดช',
+  'promptpay: 0813238287',
+  `ยอดที่ต้องโอน ฿${fmt(amt)}`
+].join('\n');
+
+$('#qrNote').textContent = note;
+$('#qrBox').hidden = false;
+$('#payReceived').value = amt;
+$('#payChange').value = '฿0';
   }else{
     $('#qrBox').hidden = true;   // เงินสด = ซ่อนทั้งบล็อก ไม่เหลือช่องว่าง
     $('#qrImg').src = '';
