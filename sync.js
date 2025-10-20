@@ -3,7 +3,7 @@
 
 const SYNC = {
   // ใส่ลิงก์ Web App (/exec) ได้เลย หรือปล่อยว่างแล้ววางผ่าน UI ช่อง “Web App URL”
-  defaultUrl: "https://script.google.com/macros/s/AKfycbz3PktISjWdIu8LHOdpC9dRh8QgZ0z91K5kHIUsuocnNnX6yr39fvnIlmd2VS5lyUva/exec",
+  defaultUrl: "https://script.google.com/macros/s/AKfycbyodu1IZHqPvUiiIMpin14Z3X0_-VNkhoagdzIeiT9cVOE3WjXKB6-iUhBo1gBFOEGc/exec",
 
   urlKey:   "POS_WEBAPP_URL",
   modeKey:  "POS_SYNC_MODE",    // 'auto' | 'manual'
