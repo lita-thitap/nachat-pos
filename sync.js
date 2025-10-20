@@ -4,7 +4,7 @@
 (() => {
   const SYNC = {
     // ใส่ลิงก์ Web App (/exec) หรือปล่อยว่างแล้ววางผ่าน UI
-    defaultUrl: "https://script.google.com/macros/s/AKfycbwXvmqRnIG3BYmw4P9fE_LojzvVevAz0IcEJ9EYPR6L0Np2xdpXP50oAFbPVVwVh9dM/exec",
+    defaultUrl: "https://script.google.com/macros/s/AKfycbzno4dN2mq-9u7Yns5IYzP2Ou90-feJ_tD7mYUbAnLOp8otG0lYweq_r237XfFN4Aoc/exec",
     urlKey:   "POS_WEBAPP_URL",
     modeKey:  "POS_SYNC_MODE",     // 'auto' | 'manual'
     queueKey: "POS_SYNC_QUEUE",    // คิวบิลค้างส่ง
