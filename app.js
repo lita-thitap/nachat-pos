@@ -186,17 +186,111 @@ $('#btnConfirmPay')?.addEventListener('click',ev=>{
 
 /* Settings: เมนู */
 function renderMenuTable(){
-  const box=$('#menuTableBox'); if(!box) return; const menu=getMenu();
+  const box = $('#menuTableBox'); if(!box) return;
+  const menu = getMenu();
   if(!menu.length){ box.textContent='ยังไม่มีเมนู — เพิ่มด้านบนได้เลย'; return; }
-  const CN={SET:'ชุดหมูกระทะ',AD:'Add-on',DW:'เครื่องดื่ม',PR:'โปรเครื่องดื่ม'};
-  box.innerHTML=`<table style="width:100%;border-collapse:collapse">
-    <thead><tr><th>รหัส</th><th>ชื่อ</th><th>หมวด</th><th style="text-align:right">ราคา</th><th></th></tr></thead>
-    <tbody>${menu.map(m=>`<tr><td>${m.id}</td><td>${m.name}</td><td>${CN[m.cat]||m.cat}</td>
-    <td style="text-align:right">฿${fmt(m.price)}</td>
-    <td style="text-align:right"><button data-del="${m.id}" class="btn ghost">ลบ</button></td></tr>`).join('')}</tbody></table>`;
-  box.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
-    setMenu(getMenu().filter(x=>x.id!==b.dataset.del)); renderMenuTable(); renderMenu();
-  }));
+
+  const CAT = {SET:'ชุดหมูกระทะ',AD:'Add-on',DW:'เครื่องดื่ม',PR:'โปรเครื่องดื่ม'};
+  const catOpts = (sel) => `
+    <option value="SET" ${sel==='SET'?'selected':''}>ชุดหมูกระทะ</option>
+    <option value="AD"  ${sel==='AD'?'selected':''}>Add-on</option>
+    <option value="DW"  ${sel==='DW'?'selected':''}>เครื่องดื่ม</option>
+    <option value="PR"  ${sel==='PR'?'selected':''}>โปรเครื่องดื่ม</option>
+  `;
+
+  const rows = menu.map(m=>`
+    <tr data-id="${m.id}">
+      <td style="white-space:nowrap">${m.id}</td>
+      <td>${m.name}</td>
+      <td>${CAT[m.cat]||m.cat}</td>
+      <td style="text-align:right">฿${fmt(m.price)}</td>
+      <td style="text-align:right; display:flex; gap:8px; justify-content:flex-end">
+        <button class="btn" data-edit="${m.id}">แก้ไข</button>
+        <button class="btn ghost" data-del="${m.id}">ลบ</button>
+      </td>
+    </tr>`).join('');
+
+  box.innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr>
+          <th style="width:120px">รหัส</th>
+          <th>ชื่อ</th>
+          <th style="width:160px">หมวด</th>
+          <th style="width:120px;text-align:right">ราคา</th>
+          <th style="width:190px"></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  // ลบเมนู
+  box.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id = btn.dataset.del;
+      const next = getMenu().filter(x=>x.id!==id);
+      setMenu(next);
+      renderMenuTable(); renderMenu();
+    });
+  });
+
+  // แก้ไขเมนู (inline)
+  box.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id  = btn.dataset.edit;
+      const all = getMenu();
+      const m   = all.find(x=>x.id===id);
+      if(!m) return;
+
+      const tr = box.querySelector(`tr[data-id="${id}"]`);
+      tr.innerHTML = `
+        <td><input class="edit-code" value="${m.id}" style="width:110px" /></td>
+        <td><input class="edit-name" value="${m.name}" /></td>
+        <td>
+          <select class="edit-cat" style="width:160px">
+            ${catOpts(m.cat)}
+          </select>
+        </td>
+        <td style="text-align:right">
+          <input class="edit-price" type="number" min="0" step="1" value="${m.price}" style="width:110px;text-align:right" />
+        </td>
+        <td style="text-align:right; display:flex; gap:8px; justify-content:flex-end">
+          <button class="btn" data-save="${id}">บันทึก</button>
+          <button class="btn ghost" data-cancel="${id}">ยกเลิก</button>
+        </td>
+      `;
+
+      // ยกเลิก = รีเฟรชตารางเดิม
+      tr.querySelector('[data-cancel]').addEventListener('click', ()=>{
+        renderMenuTable();
+      });
+
+      // บันทึกค่าใหม่
+      tr.querySelector('[data-save]').addEventListener('click', ()=>{
+        const newId    = tr.querySelector('.edit-code').value.trim().toUpperCase();
+        const newName  = tr.querySelector('.edit-name').value.trim();
+        const newCat   = tr.querySelector('.edit-cat').value;
+        const newPrice = Number(tr.querySelector('.edit-price').value||0);
+
+        if(!newId || !newName || !(newCat in CAT) || newPrice<0){
+          alert('กรอกข้อมูลให้ถูกต้อง (รหัส/ชื่อ/หมวด/ราคา)'); return;
+        }
+
+        // กันรหัสซ้ำ (ยกเว้นกรณีไม่เปลี่ยนรหัส)
+        if(newId!==id && all.some(x=>x.id===newId)){
+          alert('รหัสเมนูซ้ำ กรุณาใช้รหัสอื่น'); return;
+        }
+
+        // อัปเดตใน array
+        const idx = all.findIndex(x=>x.id===id);
+        all[idx] = { id:newId, name:newName, cat:newCat, price:newPrice };
+
+        setMenu(all);
+        renderMenuTable();   // รีเฟรชตาราง
+        renderMenu();        // รีเฟรชปุ่มสั่งในหน้า POS
+      });
+    });
+  });
 }
 $('#btnAddMenu')?.addEventListener('click',()=>{
   const name=$('#newName').value.trim(), price=Number($('#newPrice').value||0), cat=$('#newCat').value;
