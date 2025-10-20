@@ -67,6 +67,12 @@
     /* QR block */
     .qr-wrap{width:220px}
     .qr-wrap img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #ddd}
+    /* ให้ซ่อนกล่อง QR หายเกลี้ยงเมื่อ hidden */
+    #qrBox[hidden]{display:none !important;}
+    /* จัดแนว/ระยะห่าง QR block */
+    #qrBox{gap:10px;align-items:flex-start;}
+    /* รองรับขึ้นบรรทัดใหม่ในโน้ตด้วย \n (กรณีใช้ textContent) */
+    #qrNote{white-space:pre-line;}
   </style>
 </head>
 <body>
@@ -275,6 +281,7 @@
     document.querySelectorAll('.tab').forEach(btn=>{
       btn.addEventListener('click',()=>{
         document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+        btn.addEventListener('click',()=>{});
         btn.classList.add('active');
         document.querySelectorAll('.tabpane').forEach(p=>p.hidden=true);
         document.querySelector(btn.dataset.tab).hidden=false;
