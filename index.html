@@ -35,7 +35,6 @@
     .btn{padding:9px 12px;border-radius:12px;border:1.5px solid var(--black);background:#fff;color:#111;cursor:pointer}
     .btn.primary{background:#111;color:#fff}
     .btn.ghost{background:transparent}
-    /* ปุ่มเตือน (สไตล์มนเหมือนเดิม) */
     .btn.warning{background:#fff7e6;border-color:#ffb020;color:#8a5a00}
     .btn.warning:hover{background:#fffaef}
 
@@ -67,11 +66,8 @@
     /* QR block */
     .qr-wrap{width:220px}
     .qr-wrap img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #ddd}
-    /* ให้ซ่อนกล่อง QR หายเกลี้ยงเมื่อ hidden */
     #qrBox[hidden]{display:none !important;}
-    /* จัดแนว/ระยะห่าง QR block */
     #qrBox{gap:10px;align-items:flex-start;}
-    /* รองรับขึ้นบรรทัดใหม่ในโน้ตด้วย \n (กรณีใช้ textContent) */
     #qrNote{white-space:pre-line;}
   </style>
 </head>
@@ -230,67 +226,4 @@
       <h3>ปิดบิล</h3>
 
       <div class="row">
-        <div><label class="muted">โต๊ะ</label><input id="payTable" readonly /></div>
-        <div><label class="muted">พนักงาน</label><input id="payStaff" readonly /></div>
-      </div>
-
-      <div style="height:6px"></div>
-      <div><label class="muted">ยอดรวมทั้งหมด</label><input id="payTotal" readonly /></div>
-      <div style="height:6px"></div>
-
-      <div class="row">
-        <div style="flex:1">
-          <label class="muted">วิธีชำระเงิน</label>
-          <select id="payMethod" style="width:100%">
-            <option value="cash">เงินสด</option>
-            <option value="scan">โอน/สแกน</option>
-          </select>
-        </div>
-        <div style="flex:1">
-          <label class="muted">รับเงิน</label>
-          <input id="payReceived" type="number" placeholder="รับเงินมา (บาท)" />
-        </div>
-        <div style="flex:1">
-          <label class="muted">เงินทอน</label>
-          <input id="payChange" readonly placeholder="฿0" />
-        </div>
-      </div>
-
-      <div id="qrBox" class="row" style="margin-top:6px" hidden>
-        <div class="qr-wrap">
-          <img id="qrImg" alt="QR" />
-        </div>
-        <div id="qrNote" class="muted" style="margin-left:10px"></div>
-      </div>
-
-      <div class="row" style="margin-top:6px;align-items:center">
-        <label class="muted" style="display:flex;align-items:center;gap:8px">
-          <input type="checkbox" id="printReceiptChk"> พิมพ์บิลหลังปิดบิล
-        </label>
-      </div>
-
-      <div class="right" style="gap:8px;margin-top:10px">
-        <button class="btn" value="cancel">ยกเลิก</button>
-        <button id="btnConfirmPay" class="btn primary" value="ok">ปิดบิล</button>
-      </div>
-    </form>
-  </dialog>
-
-  <script>
-    // Tabs
-    document.querySelectorAll('.tab').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-        btn.addEventListener('click',()=>{});
-        btn.classList.add('active');
-        document.querySelectorAll('.tabpane').forEach(p=>p.hidden=true);
-        document.querySelector(btn.dataset.tab).hidden=false;
-        if(btn.dataset.tab==='#reports'){ window.renderReports?.(); }
-      });
-    });
-  </script>
-
-  <script src="app.js"></script>
-  <script src="sync.js"></script>
-</body>
-</html>
+        <div><label class="muted
