@@ -25,28 +25,40 @@ function ensureMenuSeed(){
   }
 }
 
-/* State helpers */
-const getMenu = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
-const setMenu = v => localStorage.setItem(K.MENU, JSON.stringify(v));
-const getCart = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
-const setCart = v => localStorage.setItem(K.CART, JSON.stringify(v));
-const getBills= () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
-const setBills= v => localStorage.setItem(K.BILLS, JSON.stringify(v));
-const getSales= () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
-const setSales= v => localStorage.setItem(K.SALES, JSON.stringify(v));
+/* ---------- State helpers ---------- */
+const getMenu  = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
+const setMenu  = v => localStorage.setItem(K.MENU, JSON.stringify(v));
+const getCart  = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
+const setCart  = v => localStorage.setItem(K.CART, JSON.stringify(v));
+const getBills = () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
+const setBills = v => localStorage.setItem(K.BILLS, JSON.stringify(v));
+const getSales = () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
+const setSales = v => localStorage.setItem(K.SALES, JSON.stringify(v));
 
 /* ---------- POS: render menu ---------- */
-function groupByCat(a){ const m=new Map(); a.forEach(it=>{if(!m.has(it.cat)) m.set(it.cat,[]); m.get(it.cat).push(it)}); return m; }
+function groupByCat(a){
+  const m=new Map();
+  a.forEach(it=>{
+    if(!m.has(it.cat)) m.set(it.cat,[]);
+    m.get(it.cat).push(it);
+  });
+  return m;
+}
 function renderMenu(){
   const box = $('#menuPanels'); if(!box) return; box.innerHTML='';
-  const by = groupByCat(getMenu()); const CN={SET:'ชุดหมูกระทะ',AD:'Add-on',DW:'เครื่องดื่ม',PR:'โปรเครื่องดื่ม'};
+  const by = groupByCat(getMenu());
+  const CN={SET:'ชุดหมูกระทะ',AD:'Add-on',DW:'เครื่องดื่ม',PR:'โปรเครื่องดื่ม'};
   for(const [cat,items] of by){
     const col=document.createElement('div'); col.className='card menu-column';
     col.innerHTML=`<h3>${CN[cat]||cat} <span class="muted">${items.length} รายการ</span></h3>`;
     items.forEach(it=>{
       const btn=document.createElement('div'); btn.className='item';
       btn.innerHTML=`${it.name} <span class="price">฿${fmt(it.price)}</span>`;
-      btn.addEventListener('click',()=>{ const c=getCart(); c.push({id:it.id,name:it.name,price:it.price,qty:1}); setCart(c); renderCart(); });
+      btn.addEventListener('click',()=>{
+        const c=getCart();
+        c.push({id:it.id,name:it.name,price:it.price,qty:1});
+        setCart(c); renderCart();
+      });
       col.appendChild(btn);
     });
     box.appendChild(col);
@@ -56,7 +68,8 @@ function renderMenu(){
 /* ---------- Cart ---------- */
 function renderCart(){
   const list=$('#cartList'), total=$('#cartTotal'); if(!list||!total) return;
-  const cart=getCart(); if(!cart.length){ list.textContent='ยังไม่มีรายการ'; total.textContent='0'; return; }
+  const cart=getCart();
+  if(!cart.length){ list.textContent='ยังไม่มีรายการ'; total.textContent='0'; return; }
   list.innerHTML=''; let sum=0;
   cart.forEach((it,i)=>{
     sum+=it.qty*it.price;
@@ -84,7 +97,8 @@ $('#btnOpenBill')?.addEventListener('click',()=>{
   const cart=getCart(); if(!cart.length) return alert('ตะกร้าค่าว่าง');
   const total=cart.reduce((a,b)=>a+b.qty*b.price,0);
   const b={id:Date.now(),table,staff,items:cart,createdAt:new Date().toISOString(),total};
-  const bills=getBills(); bills.push(b); setBills(bills); setCart([]); renderCart(); renderOpenBills();
+  const bills=getBills(); bills.push(b); setBills(bills);
+  setCart([]); renderCart(); renderOpenBills();
   alert(`เปิดบิล โต๊ะ ${table} แล้ว`);
 });
 
@@ -92,7 +106,10 @@ $('#btnAddToBill')?.addEventListener('click',()=>{
   const table=$('#inpTable').value.trim(); if(!table) return alert('กรอกโต๊ะก่อน');
   const cart=getCart(); if(!cart.length) return alert('ตะกร้าค่าว่าง');
   const bills=getBills(); let b=bills.find(x=>x.table===table);
-  if(!b){ b={id:Date.now(),table,staff:$('#inpStaff').value.trim()||'staff',items:[],createdAt:new Date().toISOString(),total:0}; bills.push(b); }
+  if(!b){
+    b={id:Date.now(),table,staff:$('#inpStaff').value.trim()||'staff',items:[],createdAt:new Date().toISOString(),total:0};
+    bills.push(b);
+  }
   b.items.push(...cart); b.total=b.items.reduce((s,i)=>s+i.qty*i.price,0);
   setBills(bills); setCart([]); renderCart(); renderOpenBills();
 });
@@ -100,7 +117,8 @@ $('#btnAddToBill')?.addEventListener('click',()=>{
 /* ---------- Bills list (ดู/แก้ไข/ยกเลิก/ปิด) ---------- */
 function renderOpenBills(){
   const box=$('#openBills'); if(!box) return; box.innerHTML='';
-  const bills=getBills(); if(!bills.length){ box.innerHTML='<div class="muted">ยังไม่มีบิลที่เปิดอยู่</div>'; return; }
+  const bills=getBills();
+  if(!bills.length){ box.innerHTML='<div class="muted">ยังไม่มีบิลที่เปิดอยู่</div>'; return; }
   bills.forEach(b=>{
     const row=document.createElement('div'); row.className='card bill-row';
     row.innerHTML=`
@@ -138,7 +156,7 @@ function openPayModal(id){
   $('#payTable').value=b.table; $('#payStaff').value=b.staff;
   $('#payTotal').value=`฿${fmt(b.total)}`; $('#payReceived').value=b.total; $('#payChange').value='฿0';
   $('#payMethod').value='cash'; $('#printReceiptChk').checked=false;
-  // เริ่มต้นซ่อน QR
+  // เริ่มต้นซ่อน QR ทั้งบล็อก
   $('#qrBox').hidden = true;
   $('#qrImg').src = '';
   $('#qrNote').textContent = '';
@@ -149,21 +167,22 @@ $('#payMethod')?.addEventListener('change',e=>{
   const isScan = e.target.value === 'scan';
   if(isScan){
     const amt = PAY_BILL?.total || 0;
-const QR_URL = 'qrcode.png';
-$('#qrImg').src = QR_URL;
+    const QR_URL = 'qrcode.png';
+    $('#qrImg').src = QR_URL;
 
-const note = [
-  'KBANK · กชพร ทรัพย์คงเดช',
-  'promptpay: 0813238287',
-  `ยอดที่ต้องโอน ฿${fmt(amt)}`
-].join('\n');
+    const note = [
+      'KBANK · กชพร ทรัพย์คงเดช',
+      'promptpay: 0813238287',
+      `ยอดที่ต้องโอน ฿${fmt(amt)}`
+    ].join('\n');
 
-$('#qrNote').textContent = note;
-$('#qrBox').hidden = false;
-$('#payReceived').value = amt;
-$('#payChange').value = '฿0';
+    $('#qrNote').textContent = note;
+    $('#qrBox').hidden = false;      // แสดง QR + โน้ต
+    $('#payReceived').value = amt;   // โอน=ยอดพอดี
+    $('#payChange').value = '฿0';
   }else{
-    $('#qrBox').hidden = true;   // เงินสด = ซ่อนทั้งบล็อก ไม่เหลือช่องว่าง
+    // เงินสด = ซ่อนทั้งบล็อก ไม่เหลือช่องว่างหรือรูป
+    $('#qrBox').hidden = true;
     $('#qrImg').src = '';
     $('#qrNote').textContent = '';
   }
@@ -202,10 +221,20 @@ $('#btnConfirmPay')?.addEventListener('click',ev=>{
   ev.preventDefault(); if(!PAY_BILL) return;
   const method=$('#payMethod').value, received=Number($('#payReceived').value||0), total=PAY_BILL.total;
   if(method==='cash' && received<total) return alert('จำนวนเงินไม่พอ (เงินสด)');
-  const sale={ id:'S'+Date.now(), table:PAY_BILL.table, staff:PAY_BILL.staff, items:PAY_BILL.items,
-    total, createdAt:new Date().toISOString(), payment:{method,received,change:Math.max(0,received-total)} };
+  const sale={
+    id:'S'+Date.now(),
+    table:PAY_BILL.table,
+    staff:PAY_BILL.staff,
+    items:PAY_BILL.items,
+    total,
+    createdAt:new Date().toISOString(),
+    payment:{method,received,change:Math.max(0,received-total)}
+  };
   const sales=getSales(); sales.push(sale); setSales(sales);
-  if(typeof enqueueSale==='function') enqueueSale(sale); // sync -> Sheets
+
+  // ให้ sync.js จัดการคิวส่งไป Google Sheets (ถ้ามี)
+  if(typeof enqueueSale==='function') enqueueSale(sale);
+
   setBills(getBills().filter(x=>x.id!==PAY_BILL.id));
   $('#payModal').close();
   if($('#printReceiptChk').checked) printReceipt(sale);
@@ -315,7 +344,9 @@ function renderMenuTable(){
 }
 
 $('#btnAddMenu')?.addEventListener('click',()=>{
-  const name=$('#newName').value.trim(), price=Number($('#newPrice').value||0), cat=$('#newCat').value;
+  const name=$('#newName').value.trim(),
+        price=Number($('#newPrice').value||0),
+        cat=$('#newCat').value;
   const code=($('#newCode').value.trim()||('X'+Math.random().toString(36).slice(2,6))).toUpperCase();
   if(!name||price<=0) return alert('กรอกชื่อ/ราคาให้ถูกต้อง');
   const menu=getMenu(); menu.push({id:code,name,cat,price}); setMenu(menu);
@@ -335,24 +366,45 @@ document.getElementById('btnRestoreMenu')?.addEventListener('click', ()=>{
 function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
 function endOfDay(d){ const x=new Date(d); x.setHours(23,59,59,999); return x; }
 function getUIRange(){
-  const p=$('#selPreset')?.value||'month', f=$('#dFrom'), t=$('#dTo'); const now=new Date(); let from,to;
-  if(p==='custom'){ from=f?.value?startOfDay(f.value):new Date(0); to=t?.value?endOfDay(t.value):new Date(8640000000000000); return {from,to}; }
+  const p=$('#selPreset')?.value||'month', f=$('#dFrom'), t=$('#dTo');
+  const now=new Date(); let from,to;
+  if(p==='custom'){
+    from=f?.value?startOfDay(f.value):new Date(0);
+    to  =t?.value?endOfDay(t.value):new Date(8640000000000000);
+    return {from,to};
+  }
   if(p==='today'){ from=startOfDay(now); to=endOfDay(now); }
   else if(p==='7d'){ to=endOfDay(now); from=startOfDay(new Date(now-6*24*3600*1000)); }
   else { const y=now.getFullYear(), m=now.getMonth(); from=new Date(y,m,1); to=new Date(y,m+1,0,23,59,59,999); }
-  if(f) f.value=from.toISOString().slice(0,10); if(t) t.value=to.toISOString().slice(0,10); return {from,to};
+  if(f) f.value=from.toISOString().slice(0,10);
+  if(t) t.value=to.toISOString().slice(0,10);
+  return {from,to};
 }
 function renderReports(){
   const sales=getSales(), {from,to}=getUIRange();
-  const rows=sales.filter(s=>{ const d=new Date(s.createdAt||s.updatedAt||Date.now()); return d>=from && d<=to; });
-  const sum=rows.reduce((a,b)=>a+Number(b.total||0),0), avg=rows.length?sum/rows.length:0;
-  $('#kpiSum') && ($('#kpiSum').textContent='฿'+fmt(sum));
-  $('#kpiBills') && ($('#kpiBills').textContent=rows.length);
-  $('#kpiAvg') && ($('#kpiAvg').textContent='฿'+fmt(avg));
-  const map=new Map(); rows.forEach(r=>(r.items||[]).forEach(i=>{ const k=i.name||i.id; map.set(k,(map.get(k)||0)+(Number(i.qty)||1)); }));
-  const top=[...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5), ul=$('#topList');
-  if(ul) ul.innerHTML=top.length?top.map(([n,q])=>`<li><span>${n}</span><b>${q}</b></li>`).join(''):'<div class="muted">ยังไม่มีข้อมูล</div>';
-  const box=$('#salesTableBox'); if(box){
+  const rows=sales.filter(s=>{
+    const d=new Date(s.createdAt||s.updatedAt||Date.now());
+    return d>=from && d<=to;
+  });
+  const sum=rows.reduce((a,b)=>a+Number(b.total||0),0),
+        avg=rows.length?sum/rows.length:0;
+  $('#kpiSum')  && ($('#kpiSum').textContent='฿'+fmt(sum));
+  $('#kpiBills')&& ($('#kpiBills').textContent=rows.length);
+  $('#kpiAvg')  && ($('#kpiAvg').textContent='฿'+fmt(avg));
+
+  const map=new Map();
+  rows.forEach(r=>(r.items||[]).forEach(i=>{
+    const k=i.name||i.id;
+    map.set(k,(map.get(k)||0)+(Number(i.qty)||1));
+  }));
+  const top=[...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5),
+        ul=$('#topList');
+  if(ul) ul.innerHTML=top.length
+    ? top.map(([n,q])=>`<li><span>${n}</span><b>${q}</b></li>`).join('')
+    : '<div class="muted">ยังไม่มีข้อมูล</div>';
+
+  const box=$('#salesTableBox');
+  if(box){
     if(!rows.length){ box.innerHTML='<div class="muted">ยังไม่มีข้อมูล</div>'; return; }
     box.innerHTML=`<table>
       <thead><tr><th>วันที่เวลา</th><th>โต๊ะ</th><th style="text-align:right">ยอดสุทธิ</th><th>ชำระ</th></tr></thead>
@@ -380,6 +432,6 @@ document.getElementById('btnResetSales')?.addEventListener('click', () => {
 
 /* ---------- Boot ---------- */
 window.addEventListener('load',()=>{
-  ensureMenuSeed();                 // สำคัญ: เติมเมนูเริ่มต้นถ้าเมนูว่าง/พัง
+  ensureMenuSeed();                 // เติมเมนูเริ่มต้นถ้าข้อมูลว่าง/พัง
   renderMenu(); renderCart(); renderOpenBills(); renderMenuTable(); renderReports();
 });
