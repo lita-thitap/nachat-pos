@@ -97,7 +97,7 @@ $('#btnAddToBill')?.addEventListener('click',()=>{
   setBills(bills); setCart([]); renderCart(); renderOpenBills();
 });
 
-/* ---------- Bills list (ดู/แก้ไข/ยกเลิก/ปิด) ---------- */
+/* ---------- Bills list ---------- */
 function renderOpenBills(){
   const box=$('#openBills'); if(!box) return; box.innerHTML='';
   const bills=getBills(); if(!bills.length){ box.innerHTML='<div class="muted">ยังไม่มีบิลที่เปิดอยู่</div>'; return; }
@@ -139,7 +139,7 @@ function openPayModal(id){
   $('#payTotal').value=`฿${fmt(b.total)}`; $('#payReceived').value=b.total; $('#payChange').value='฿0';
   $('#payMethod').value='cash';
 
-  // เริ่มต้นซ่อน QR ให้เกลี้ยง
+  // ซ่อน QR เริ่มต้น
   $('#qrBox').hidden = true;
   if ($('#qrBox').style) $('#qrBox').style.display = 'none';
   $('#qrImg').src = '';
@@ -151,22 +151,13 @@ $('#payMethod')?.addEventListener('change',e=>{
   const isScan = e.target.value === 'scan';
   if(isScan){
     const amt = PAY_BILL?.total || 0;
-    const QR_URL = 'qrcode.png';
-    $('#qrImg').src = QR_URL;
-
-    const note = [
-      'KBANK · กชพร ทรัพย์คงเดช',
-      'promptpay: 0813238287',
-      `ยอดที่ต้องโอน ฿${fmt(amt)}`
-    ].join('\n');
-
-    $('#qrNote').textContent = note;         // มี CSS white-space: pre-line ใน index.html
+    $('#qrImg').src = 'qrcode.png';
+    $('#qrNote').textContent = ['KBANK · กชพร ทรัพย์คงเดช','promptpay: 0813238287',`ยอดที่ต้องโอน ฿${fmt(amt)}`].join('\n');
     $('#qrBox').hidden = false;
     if ($('#qrBox').style) $('#qrBox').style.display = 'flex';
     $('#payReceived').value = amt;
     $('#payChange').value = '฿0';
   }else{
-    // เงินสด: ซ่อนบล็อกทั้งหมด ไม่เหลือที่ว่าง/ไอคอน
     $('#qrBox').hidden = true;
     if ($('#qrBox').style) $('#qrBox').style.display = 'none';
     $('#qrImg').src = '';
@@ -179,7 +170,7 @@ $('#payReceived')?.addEventListener('input',()=>{
   $('#payChange').value=`฿${fmt(Math.max(0,r-t))}`;
 });
 
-/* ---------- พิมพ์บิล (58 มม.) ---------- */
+/* ---------- พิมพ์บิล (58 มม. + โลโก้/ชื่อร้าน/โทร) ---------- */
 function printReceipt(sale){
   const lines=(sale.items||[]).map(i=>`
     <tr>
@@ -194,8 +185,10 @@ function printReceipt(sale){
     @page { size: 58mm auto; margin: 0; }
     body{ width:58mm; margin:0; font:12px/1.35 -apple-system,system-ui,Segoe UI,Roboto,"TH Sarabun New",sans-serif; color:#000; }
     .wrap{ padding:8px 8px 12px; }
-    h1{ font-size:14px; margin:0 0 4px; text-align:center; font-weight:700; }
-    .muted{ color:#333; text-align:center; font-size:11px; margin-bottom:6px; }
+    .logo{ display:block; margin:0 auto 4px; width:28mm; max-width:48px; height:auto; }
+    .store{ text-align:center; font-weight:700; font-size:14px; }
+    .contact{ text-align:center; font-size:11px; margin-top:2px; }
+    .muted{ color:#333; text-align:center; font-size:11px; margin:6px 0; }
     table{ width:100%; border-collapse:collapse; }
     thead th{ border-top:1px dashed #000; border-bottom:1px dashed #000; padding:4px 0; font-weight:700; }
     td{ padding:3px 0; }
@@ -203,17 +196,17 @@ function printReceipt(sale){
     td.qty{ width:12%; text-align:center; }
     td.price{ width:20%; text-align:right; }
     td.sum{ width:20%; text-align:right; }
-    tfoot td{ padding:4px 0; }
     .line{ border-top:1px dashed #000; margin:6px 0; }
     .right{ text-align:right; }
-    .center{ text-align:center; }
     .totals td{ padding:3px 0; }
     .bold{ font-weight:700; }
     .thanks{ margin-top:6px; text-align:center; font-size:11px; }
     @media print{ .noprint{ display:none } }
   </style></head><body>
   <div class="wrap">
-    <h1>ณฉัตร | Nachat – POS</h1>
+    <img src="nachatlogo.png" class="logo" alt="logo" onerror="this.style.display='none'">
+    <div class="store">ณฉัตร | Nachat – POS</div>
+    <div class="contact">โทร 081-323-8287</div>
     <div class="muted">${new Date(sale.createdAt).toLocaleString('th-TH')} • โต๊ะ ${sale.table} • ${sale.staff}</div>
 
     <table>
@@ -237,7 +230,7 @@ function printReceipt(sale){
   <script>window.print();setTimeout(()=>window.close(),300);<\/script>
   </body></html>`;
 
-  const w=window.open('','_blank','width=380,height=600'); // 58mm ~ 220-384px ขึ้นกับพรินเตอร์
+  const w=window.open('','_blank','width=380,height=600');
   w.document.write(html); w.document.close();
 }
 
@@ -264,7 +257,7 @@ $('#btnConfirmPay')?.addEventListener('click',ev=>{
   };
 
   const sales=getSales(); sales.push(sale); setSales(sales);
-  if(typeof enqueueSale==='function') enqueueSale(sale); // sync -> Sheets
+  if(typeof enqueueSale==='function') enqueueSale(sale);
 
   setBills(getBills().filter(x=>x.id!==PAY_BILL.id));
   $('#payModal').close();
@@ -277,7 +270,7 @@ $('#btnConfirmPay')?.addEventListener('click',ev=>{
   if(!$('#reports')?.hidden) renderReports();
 });
 
-/* ---------- Settings: เมนู (เพิ่ม/แก้ไข inline/ลบ) ---------- */
+/* ---------- Settings: เมนู ---------- */
 function renderMenuTable(){
   const box = $('#menuTableBox'); if(!box) return;
   const menu = getMenu();
@@ -409,7 +402,7 @@ function renderReports(){
   const rows=sales.filter(s=>{ const d=new Date(s.createdAt||s.updatedAt||Date.now()); return d>=from && d<=to; });
   const sum=rows.reduce((a,b)=>a+Number(b.total||0),0), avg=rows.length?sum/rows.length:0;
   $('#kpiSum') && ($('#kpiSum').textContent='฿'+fmt(sum));
-  $('#kpiBills') && ($('#kpiBills').textContent=rows.length);   // ✅ แก้วงเล็บเกิน
+  $('#kpiBills') && ($('#kpiBills').textContent=rows.length);
   $('#kpiAvg') && ($('#kpiAvg').textContent='฿'+fmt(avg));
   const map=new Map(); rows.forEach(r=>(r.items||[]).forEach(i=>{ const k=i.name||i.id; map.set(k,(map.get(k)||0)+(Number(i.qty)||1)); }));
   const top=[...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5), ul=$('#topList');
