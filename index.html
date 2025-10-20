@@ -13,7 +13,6 @@
     *{box-sizing:border-box}
     html,body{margin:0;background:var(--bg);color:var(--black);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
 
-    /* Header */
     header{background:linear-gradient(#1c1c1c,#1a1a1a);color:#fff;border-bottom:1px solid #000}
     .wrap{max-width:1200px;margin:0 auto;padding:16px}
     .head-row{display:flex;align-items:center;gap:12px;justify-content:center}
@@ -21,13 +20,11 @@
     h1{margin:0;font-size:24px;font-weight:800}
     .sub{margin-top:6px;text-align:center;color:#d5d5d5}
 
-    /* Tabs */
     .tabs{display:flex;gap:8px;flex-wrap:wrap;max-width:1200px;margin:16px auto 0;padding:0 16px}
     .tab{padding:10px 14px;border:1.5px solid var(--black);border-radius:12px;background:#fff;cursor:pointer}
     .tab.active{outline:2px solid var(--black);background:var(--raised)}
     .content{max-width:1200px;margin:12px auto;padding:0 16px 32px}
 
-    /* Cards / grid */
     .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
     .row{display:flex;gap:10px;align-items:center}
@@ -35,30 +32,25 @@
     .right{display:flex;justify-content:flex-end}
     .muted{color:var(--muted)}
 
-    /* Controls */
     .btn{padding:9px 12px;border-radius:12px;border:1.5px solid var(--black);background:#fff;color:#111;cursor:pointer}
     .btn.primary{background:#111;color:#fff}
     .btn.ghost{background:transparent}
     input,select{background:#fff;border:1.5px solid var(--black);color:#111;padding:9px 10px;border-radius:12px;width:100%}
     .pill{padding:6px 10px;border-radius:999px;border:1.5px solid var(--black);background:#fff;color:#111}
 
-    /* POS buttons */
     .menu-column .item{background:#111;color:#fff;border-radius:14px;padding:10px 12px;border:1px solid #000;cursor:pointer}
     .menu-column .item .price{display:inline-block;margin-left:10px;padding:2px 8px;border-radius:999px;background:#fff;color:#111;border:1px solid #111}
 
-    /* Open bills list */
-    .bill-row{display:grid;grid-template-columns:1fr 160px 120px 120px 120px;gap:10px;align-items:center}
+    .bill-row{display:grid;grid-template-columns:1fr 160px 360px;gap:10px;align-items:center}
+    .bill-actions{display:flex;gap:8px;justify-content:flex-end}
 
-    /* Subtabs (settings) */
     .subtabs{display:flex;gap:8px;margin-bottom:12px}
     .subtab{padding:8px 10px;border:1.5px solid var(--black);border-radius:10px;background:#fff;cursor:pointer}
     .subtab.active{outline:2px solid var(--black);background:var(--raised)}
 
-    /* Modal */
     dialog{border:none;border-radius:16px;max-width:520px;width:96%}
     dialog::backdrop{background:rgba(0,0,0,.35)}
 
-    /* Report layout */
     .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .report-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
@@ -68,13 +60,12 @@
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
 
-    /* QR image keep square */
-    #qrImg{max-height:140px;aspect-ratio:1/1;object-fit:contain;border-radius:10px;border:1px solid #ddd}
+    .qr-wrap{width:220px}
+    .qr-wrap img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #ddd}
   </style>
 </head>
 <body>
 
-  <!-- Header -->
   <header>
     <div class="wrap">
       <div class="head-row">
@@ -85,7 +76,6 @@
     </div>
   </header>
 
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" data-tab="#pos">รับออเดอร์</button>
     <button class="tab" data-tab="#open">โต๊ะ/บิล</button>
@@ -129,20 +119,71 @@
       </div>
     </section>
 
-    <!-- REPORTS (อย่างย่อ) -->
+    <!-- REPORTS -->
     <section id="reports" class="tabpane" hidden>
       <div class="card">
-        <h3>สรุปยอด</h3>
-        <div class="row" style="gap:10px">
-          <button class="btn" id="btnToday">วันนี้</button>
-          <button class="btn" id="btnMonth">เดือนนี้</button>
+        <div class="row" style="gap:8px;align-items:end">
+          <div>
+            <label class="muted">ช่วง</label>
+            <select id="selPreset">
+              <option value="month">เดือนนี้</option>
+              <option value="today">วันนี้</option>
+              <option value="7d">7 วันล่าสุด</option>
+              <option value="custom">กำหนดเอง</option>
+            </select>
+          </div>
+          <div><label class="muted">จาก</label><input type="date" id="dFrom"></div>
+          <div><label class="muted">ถึง</label><input type="date" id="dTo"></div>
+          <div class="right"><button id="btnExportCsv" class="btn">Export CSV</button></div>
         </div>
-        <div style="height:8px"></div>
-        <div id="reportBox" class="muted">ยังไม่มีข้อมูล</div>
+
+        <div style="height:10px"></div>
+
+        <div class="row" style="gap:10px; align-items:center">
+          <div><b>Google Sheets Sync</b><div class="muted">Web App URL (Apps Script)</div></div>
+          <input id="inpWebAppUrl" placeholder="https://script.google.com/macros/s/…/exec" />
+          <select id="selSyncMode" style="max-width:220px">
+            <option value="auto">Auto: ปิดบิลแล้วซิงก์เลย</option>
+            <option value="manual">Manual: ซิงก์เอง</option>
+          </select>
+          <button id="btnSaveUrl" class="btn">บันทึกการตั้งค่า</button>
+          <button id="btnTest" class="btn">ทดสอบเชื่อมต่อ</button>
+          <button id="btnPushPending" class="btn primary">ซิงก์ที่ค้างส่ง</button>
+        </div>
+        <div id="gsStatus" class="muted" style="margin-top:6px"></div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="report-grid">
+        <div class="report-cards">
+          <div class="kpi">
+            <h2>ยอดขายรวม</h2>
+            <div class="big" id="kpiSum">฿0</div>
+            <div class="muted">บิลเฉลี่ย: <span id="kpiAvg">฿0</span></div>
+          </div>
+          <div class="kpi">
+            <h2>จำนวนบิล</h2>
+            <div class="big" id="kpiBills">0</div>
+            <div class="muted">ช่วงที่เลือก</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Top สินค้าขายดี</h3>
+          <ul id="topList" class="top-list" style="list-style:none;padding:0;margin:0"></ul>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="card">
+        <h3>รายการบิล</h3>
+        <div id="salesTableBox">ยังไม่มีข้อมูล</div>
       </div>
     </section>
 
-    <!-- SETTINGS (เมนู) -->
+    <!-- SETTINGS -->
     <section id="settings" class="tabpane" hidden>
       <div class="card">
         <h3>ตั้งค่าเมนู (จัดตามหมวด)</h3>
@@ -163,28 +204,19 @@
     </section>
   </div>
 
-  <!-- Pay modal (มีตัวเลือกพิมพ์บิล + QR แสดงเฉพาะโอน/สแกน) -->
+  <!-- Pay modal -->
   <dialog id="payModal">
     <form method="dialog" class="card" style="border:none">
       <h3>ปิดบิล</h3>
 
       <div class="row">
-        <div>
-          <label class="muted">โต๊ะ</label>
-          <input id="payTable" readonly />
-        </div>
-        <div>
-          <label class="muted">พนักงาน</label>
-          <input id="payStaff" readonly />
-        </div>
+        <div><label class="muted">โต๊ะ</label><input id="payTable" readonly /></div>
+        <div><label class="muted">พนักงาน</label><input id="payStaff" readonly /></div>
       </div>
 
       <div style="height:6px"></div>
 
-      <div>
-        <label class="muted">ยอดรวมทั้งหมด</label>
-        <input id="payTotal" readonly />
-      </div>
+      <div><label class="muted">ยอดรวมทั้งหมด</label><input id="payTotal" readonly /></div>
 
       <div style="height:6px"></div>
 
@@ -207,50 +239,21 @@
       </div>
 
       <div id="qrBox" class="row" style="margin-top:6px" hidden>
-        <img id="qrImg" alt="QR" />
+        <div class="qr-wrap">
+          <img id="qrImg" alt="QR" />
+        </div>
         <div id="qrNote" class="muted" style="margin-left:10px"></div>
       </div>
 
       <div class="row" style="margin-top:6px;align-items:center">
-        <label class="muted" style="max-width:140px">พิมพ์บิล</label>
-        <input id="chkPrint" type="checkbox" />
-        <div class="muted" style="flex:1">เลือกเพื่อสั่งพิมพ์หลังปิดบิล</div>
+        <label class="muted" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="printReceiptChk"> พิมพ์บิลหลังปิดบิล
+        </label>
       </div>
 
       <div class="right" style="gap:8px;margin-top:10px">
         <button class="btn" value="cancel">ยกเลิก</button>
         <button id="btnConfirmPay" class="btn primary" value="ok">ปิดบิล</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Edit Bill modal -->
-  <dialog id="editModal">
-    <form method="dialog" class="card" style="border:none;max-width:680px">
-      <h3>แก้ไขบิล</h3>
-      <div class="row">
-        <div>
-          <label class="muted">โต๊ะ</label>
-          <input id="editTable" />
-        </div>
-        <div>
-          <label class="muted">พนักงาน</label>
-          <input id="editStaff" />
-        </div>
-      </div>
-
-      <div style="height:6px"></div>
-
-      <div class="muted">รายการอาหาร / เครื่องดื่ม</div>
-      <div id="editItems" style="display:grid;gap:8px;margin-top:6px"></div>
-
-      <div style="height:8px"></div>
-      <div class="row">
-        <div class="pill">รวม: <b id="editTotal">฿0</b></div>
-        <div class="right" style="gap:8px">
-          <button class="btn ghost" value="cancel">ปิด</button>
-          <button id="btnSaveEdit" class="btn primary" value="ok">บันทึก</button>
-        </div>
       </div>
     </form>
   </dialog>
@@ -263,6 +266,7 @@
         btn.classList.add('active');
         document.querySelectorAll('.tabpane').forEach(p=>p.hidden=true);
         document.querySelector(btn.dataset.tab).hidden=false;
+        if(btn.dataset.tab==='#reports'){ window.renderReports?.(); }
       });
     });
   </script>
