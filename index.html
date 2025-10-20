@@ -63,7 +63,6 @@
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
 
-    /* QR block */
     .qr-wrap{width:220px}
     .qr-wrap img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #ddd}
     #qrBox[hidden]{display:none !important;}
@@ -226,4 +225,63 @@
       <h3>ปิดบิล</h3>
 
       <div class="row">
-        <div><label class="muted
+        <div><label class="muted">โต๊ะ</label><input id="payTable" readonly /></div>
+        <div><label class="muted">พนักงาน</label><input id="payStaff" readonly /></div>
+      </div>
+
+      <div style="height:6px"></div>
+      <div><label class="muted">ยอดรวมทั้งหมด</label><input id="payTotal" readonly /></div>
+      <div style="height:6px"></div>
+
+      <div class="row">
+        <div style="flex:1">
+          <label class="muted">วิธีชำระเงิน</label>
+          <select id="payMethod" style="width:100%">
+            <option value="cash">เงินสด</option>
+            <option value="scan">โอน/สแกน</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label class="muted">รับเงิน</label>
+          <input id="payReceived" type="number" placeholder="รับเงินมา (บาท)" />
+        </div>
+        <div style="flex:1">
+          <label class="muted">เงินทอน</label>
+          <input id="payChange" readonly placeholder="฿0" />
+        </div>
+      </div>
+
+      <div id="qrBox" class="row" style="margin-top:6px" hidden>
+        <div class="qr-wrap">
+          <img id="qrImg" alt="QR" />
+        </div>
+        <div id="qrNote" class="muted" style="margin-left:10px"></div>
+      </div>
+
+      <div class="right" style="gap:8px;margin-top:10px">
+        <button class="btn" value="cancel">ยกเลิก</button>
+        <button id="btnConfirmPay" class="btn primary" value="ok">ปิดบิล</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ✅ Tab switcher -->
+  <script>
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.tabpane').forEach(p => p.hidden = true);
+        const pane = document.querySelector(btn.dataset.tab);
+        if (pane) pane.hidden = false;
+        if (btn.dataset.tab === '#reports' && typeof window.renderReports === 'function') {
+          window.renderReports();
+        }
+      });
+    });
+  </script>
+
+  <script src="app.js"></script>
+  <script src="sync.js"></script>
+</body>
+</html>
