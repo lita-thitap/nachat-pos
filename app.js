@@ -142,6 +142,8 @@ $('#payMethod')?.addEventListener('change',e=>{
     $('#qrNote').textContent=`KBANK · กรพพร ทรัพย์คงเดช พร้อมเพย์: 0813238287 ยอดที่ต้องโอน ฿${fmt(amt)}`;
     $('#qrBox').hidden=false; $('#payReceived').value=amt; $('#payChange').value='฿0';
   }else{ $('#qrBox').hidden=true; }
+    $('#qrBox').style.display='none';   // ✅ เพิ่มบรรทัดนี้
+  }
 });
 $('#payReceived')?.addEventListener('input',()=>{
   const t=PAY_BILL?.total||0, r=Number($('#payReceived').value||0);
