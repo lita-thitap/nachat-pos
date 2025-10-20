@@ -25,15 +25,35 @@ function ensureMenuSeed(){
   }
 }
 
-/* State helpers */
-const getMenu = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
-const setMenu = v => localStorage.setItem(K.MENU, JSON.stringify(v));
-const getCart = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
-const setCart = v => localStorage.setItem(K.CART, JSON.stringify(v));
-const getBills= () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
-const setBills= v => localStorage.setItem(K.BILLS, JSON.stringify(v));
-const getSales= () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
-const setSales= v => localStorage.setItem(K.SALES, JSON.stringify(v));
+/* ---------- State helpers ---------- */
+const getMenu  = () => JSON.parse(localStorage.getItem(K.MENU)||'[]');
+const setMenu  = v => localStorage.setItem(K.MENU, JSON.stringify(v));
+const getCart  = () => JSON.parse(localStorage.getItem(K.CART)||'[]');
+const setCart  = v => localStorage.setItem(K.CART, JSON.stringify(v));
+const getBills = () => JSON.parse(localStorage.getItem(K.BILLS)||'[]');
+const setBills = v => { localStorage.setItem(K.BILLS, JSON.stringify(v)); refreshOpenButtonState(); };
+const getSales = () => JSON.parse(localStorage.getItem(K.SALES)||'[]');
+const setSales = v => localStorage.setItem(K.SALES, JSON.stringify(v));
+
+/* ---------- Utilities: ปุ่มเปิดบิลให้จางเมื่อมีบิลซ้ำ ---------- */
+function hasOpenBillForTable(table){
+  if(!table) return false;
+  return getBills().some(b => (b.table||'').trim().toLowerCase() === table.trim().toLowerCase());
+}
+function setDisabled(el, is){
+  if(!el) return;
+  el.disabled = !!is;
+  el.style.opacity = is ? 0.5 : 1;
+  el.style.cursor  = is ? 'not-allowed' : 'pointer';
+  // เติม/เอา class ghost เพื่อแมตช์ธีม
+  el.classList.toggle('ghost', !!is);
+  el.title = is ? 'มีบิลของโต๊ะนี้อยู่แล้ว' : '';
+}
+function refreshOpenButtonState(){
+  const table = $('#inpTable')?.value?.trim() || '';
+  const clash = hasOpenBillForTable(table);
+  setDisabled($('#btnOpenBill'), clash);
+}
 
 /* ---------- POS: render menu ---------- */
 function groupByCat(a){ const m=new Map(); a.forEach(it=>{if(!m.has(it.cat)) m.set(it.cat,[]); m.get(it.cat).push(it)}); return m; }
@@ -78,23 +98,28 @@ function renderCart(){
 $('#btnClearCart')?.addEventListener('click',()=>{ setCart([]); renderCart(); });
 
 /* ---------- Open bill ---------- */
+$('#inpTable')?.addEventListener('input', refreshOpenButtonState);
+
 $('#btnOpenBill')?.addEventListener('click',()=>{
-  const table=$('#inpTable').value.trim()||'N?';
-  const staff=$('#inpStaff').value.trim()||'staff';
+  const table=($('#inpTable').value||'').trim();
+  const staff=($('#inpStaff').value||'').trim()||'staff';
+  if(!table) return alert('กรอกเลขโต๊ะก่อน');
+  if(hasOpenBillForTable(table)) return alert(`มีบิลของโต๊ะ ${table} เปิดอยู่แล้ว\nใช้ “เพิ่มลงบิลปัจจุบัน” แทน`);
   const cart=getCart(); if(!cart.length) return alert('ตะกร้าค่าว่าง');
   const total=cart.reduce((a,b)=>a+b.qty*b.price,0);
   const b={id:Date.now(),table,staff,items:cart,createdAt:new Date().toISOString(),total};
-  const bills=getBills(); bills.push(b); setBills(bills); setCart([]); renderCart(); renderOpenBills();
+  const bills=getBills(); bills.push(b); setBills(bills);
+  setCart([]); renderCart(); renderOpenBills(); refreshOpenButtonState();
   alert(`เปิดบิล โต๊ะ ${table} แล้ว`);
 });
 
 $('#btnAddToBill')?.addEventListener('click',()=>{
   const table=$('#inpTable').value.trim(); if(!table) return alert('กรอกโต๊ะก่อน');
   const cart=getCart(); if(!cart.length) return alert('ตะกร้าค่าว่าง');
-  const bills=getBills(); let b=bills.find(x=>x.table===table);
+  const bills=getBills(); let b=bills.find(x=>x.table.toLowerCase()===table.toLowerCase());
   if(!b){ b={id:Date.now(),table,staff:$('#inpStaff').value.trim()||'staff',items:[],createdAt:new Date().toISOString(),total:0}; bills.push(b); }
   b.items.push(...cart); b.total=b.items.reduce((s,i)=>s+i.qty*i.price,0);
-  setBills(bills); setCart([]); renderCart(); renderOpenBills();
+  setBills(bills); setCart([]); renderCart(); renderOpenBills(); refreshOpenButtonState();
 });
 
 /* ---------- Bills list ---------- */
@@ -121,10 +146,11 @@ function renderOpenBills(){
       setCart(b.items); $('#inpTable').value=b.table; $('#inpStaff').value=b.staff;
       setBills(getBills().filter(x=>x.id!==b.id)); renderCart(); renderOpenBills();
       document.querySelector('[data-tab="#pos"]')?.click();
+      refreshOpenButtonState();
     });
     row.querySelector('[data-cancel]').addEventListener('click',()=>{
       if(!confirm(`ยกเลิกบิลโต๊ะ ${b.table}?`)) return;
-      setBills(getBills().filter(x=>x.id!==b.id)); renderOpenBills();
+      setBills(getBills().filter(x=>x.id!==b.id)); renderOpenBills(); refreshOpenButtonState();
     });
     row.querySelector('[data-pay]').addEventListener('click',()=>openPayModal(b.id));
     box.appendChild(row);
@@ -139,7 +165,7 @@ function openPayModal(id){
   $('#payTotal').value=`฿${fmt(b.total)}`; $('#payReceived').value=b.total; $('#payChange').value='฿0';
   $('#payMethod').value='cash';
 
-  // เริ่มต้นซ่อน QR ให้เกลี้ยง
+  // ซ่อน QR เริ่มต้น
   $('#qrBox').hidden = true;
   if ($('#qrBox').style) $('#qrBox').style.display = 'none';
   $('#qrImg').src = '';
@@ -153,13 +179,7 @@ $('#payMethod')?.addEventListener('change',e=>{
     const amt = PAY_BILL?.total || 0;
     const QR_URL = 'qrcode.png';
     $('#qrImg').src = QR_URL;
-
-    const note = [
-      'KBANK · กชพร ทรัพย์คงเดช',
-      'promptpay: 0813238287',
-      `ยอดที่ต้องโอน ฿${fmt(amt)}`
-    ].join('\n');
-
+    const note = ['KBANK · กชพร ทรัพย์คงเดช','promptpay: 0813238287',`ยอดที่ต้องโอน ฿${fmt(amt)}`].join('\n');
     $('#qrNote').textContent = note;
     $('#qrNote').style.whiteSpace = 'pre-line';
     $('#qrBox').hidden = false;
@@ -179,9 +199,9 @@ $('#payReceived')?.addEventListener('input',()=>{
   $('#payChange').value=`฿${fmt(Math.max(0,r-t))}`;
 });
 
-/* ---------- พิมพ์บิล (58 มม. ไม่มี orderNo) ---------- */
+/* ---------- พิมพ์บิล (58 มม. สไตล์อ่านง่าย) ---------- */
 function printReceipt(sale){
-  const VAT_RATE = 0.00; // เปลี่ยนเป็น 0.07 ถ้ามี VAT
+  const VAT_RATE = 0.00; // เปลี่ยนเป็น 0.07 ถ้าต้องการ
   const nf2 = new Intl.NumberFormat('th-TH',{minimumFractionDigits:2, maximumFractionDigits:2});
   const nf0 = new Intl.NumberFormat('th-TH');
 
@@ -194,7 +214,7 @@ function printReceipt(sale){
     <tr class="it">
       <td class="qty">${nf0.format(i.qty||1)}</td>
       <td class="name">${i.name||''}</td>
-      <td class="price">${nf2.format(i.price||0)} <span class="baht">฿</span></td>
+      <td class="price">${nf2.format(i.qty*i.price||0)} <span class="baht">฿</span></td>
     </tr>
   `).join('');
 
@@ -204,24 +224,24 @@ function printReceipt(sale){
     *{box-sizing:border-box}
     body{width:58mm;margin:0;font:12px/1.35 system-ui,-apple-system,Segoe UI,Roboto;color:#000}
     .wrap{padding:8px 8px 12px}
-    .hdr{ text-align:center; margin-bottom:8px }
-    .logo{ width:44px; height:44px; object-fit:contain; border-radius:8px; display:block; margin:0 auto 6px }
-    .store{ font-weight:700; font-size:14px }
-    .muted{ color:#444; font-size:11px }
-    table{ width:100%; border-collapse:collapse; margin-top:6px }
-    th,td{ padding:6px 0 }
-    thead th{ font-weight:700; border-bottom:1px solid #000 }
-    .qty{ width:16px; text-align:left; padding-right:6px; vertical-align:top }
-    .name{ padding-right:6px; word-break:break-word }
-    .price{ width:68px; text-align:right; white-space:nowrap }
-    .baht{ font-weight:600 }
-    .it td{ border-bottom:1px dashed #bfbfbf }
-    .sum td{ border-bottom:none; padding-top:6px }
-    .sum .label{ text-align:left }
-    .sum .val{ text-align:right; font-weight:600 }
-    .total .label{ font-weight:700 }
-    .total .val{ font-weight:800 }
-    .thank{ text-align:center; margin-top:10px; font-size:11px }
+    .hdr{text-align:center;margin-bottom:8px}
+    .logo{width:44px;height:44px;object-fit:contain;border-radius:8px;display:block;margin:0 auto 6px}
+    .store{font-weight:700;font-size:14px}
+    .muted{color:#444;font-size:11px}
+    table{width:100%;border-collapse:collapse;margin-top:6px}
+    th,td{padding:6px 0}
+    thead th{font-weight:700;border-bottom:1px solid #000}
+    .qty{width:16px;text-align:left;padding-right:6px;vertical-align:top}
+    .name{padding-right:6px;word-break:break-word}
+    .price{width:72px;text-align:right;white-space:nowrap}
+    .baht{font-weight:600}
+    .it td{border-bottom:1px dashed #bfbfbf}
+    .sum td{border-bottom:none;padding-top:6px}
+    .sum .label{text-align:left}
+    .sum .val{text-align:right;font-weight:600}
+    .total .label{font-weight:700}
+    .total .val{font-weight:800}
+    .thank{text-align:center;margin-top:10px;font-size:11px}
   </style></head><body><div class="wrap">
 
     <div class="hdr">
@@ -242,7 +262,7 @@ function printReceipt(sale){
         ${VAT_RATE>0 ? `<tr class="sum"><td></td><td class="label">VAT ${(VAT_RATE*100).toFixed(0)}%</td><td class="val">${nf2.format(vat)} ฿</td></tr>` : ''}
         <tr class="sum total"><td></td><td class="label">รวม</td><td class="val">${nf2.format(grand)} ฿</td></tr>
         <tr class="sum"><td></td><td class="label">ชำระ (${(sale.payment?.method||'').toUpperCase()})</td><td class="val">${nf2.format(sale.payment?.received||0)} ฿</td></tr>
-        <tr class="sum"><td></td><td class="label">เงินสด/เงินทอน</td><td class="val">${nf2.format(sale.payment?.change||0)} ฿</td></tr>
+        <tr class="sum"><td></td><td class="label">เงินทอน</td><td class="val">${nf2.format(sale.payment?.change||0)} ฿</td></tr>
       </tfoot>
     </table>
 
@@ -272,12 +292,12 @@ $('#btnConfirmPay')?.addEventListener('click',ev=>{
   setBills(getBills().filter(x=>x.id!==PAY_BILL.id));
   $('#payModal').close();
 
-  // ✅ พิมพ์ใบเสร็จทุกครั้งที่ปิดบิล (58 มม.)
+  // พิมพ์ใบเสร็จทุกครั้ง
   printReceipt(sale);
 
   PAY_BILL=null;
   alert('ปิดบิลสำเร็จ');
-  renderOpenBills();
+  renderOpenBills(); refreshOpenButtonState();
   if(!$('#reports')?.hidden) renderReports();
 });
 
@@ -445,12 +465,13 @@ document.getElementById('btnResetSales')?.addEventListener('click', () => {
   try { renderReports(); } catch {}
 });
 
-/* ---------- Boot: กันเมนูหายหลังรีเฟรช ---------- */
+/* ---------- Boot ---------- */
 window.addEventListener('load', () => {
-  ensureMenuSeed();                           // เติมเมนูเริ่มต้นถ้ายังไม่มี
-  const menu = getMenu();                     // กันพลาดอีกชั้น
+  ensureMenuSeed();
+  const menu = getMenu();
   if (!menu || !menu.length) {
     localStorage.setItem(K.MENU, JSON.stringify(DEFAULT_MENU));
   }
   renderMenu(); renderCart(); renderOpenBills(); renderMenuTable(); renderReports();
+  refreshOpenButtonState(); // ตรวจปุ่มเปิดบิลตั้งแต่โหลดหน้า
 });
